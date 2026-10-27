@@ -70,20 +70,6 @@ Printable OT worksheets generated from practice-based templates, adjusted to
 a child's handwriting and visual-perception needs. A name typed for printing
 lives only in memory and is stripped before anything is saved or shared.
 
-## How it was built
-
-The whole site was built by its owner, who is not a professional developer,
-working with AI coding tools, with every design decision made from the
-therapist's chair. That experience, what educators run into when they start
-building with AI and how to coach them through it, is as much the product as
-the code.
-
-Technically it is one static site: a home page, a shared brand layer, and
-three single-page apps that keep their own dependencies so they can move at
-their own pace. Tests cover the privacy rules (no names stored, no network
-calls from the IEP Writer), the report template, the rules-based document
-reader, and the scheduling logic.
-
 ## Repository layout
 
 | Part | Path | Source |
