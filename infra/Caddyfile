@@ -1,0 +1,92 @@
+# www.therapistools.com behind a Cloudflare Tunnel. TLS ends at Cloudflare's
+# edge and cloudflared connects to this listener over localhost, so plain :80
+# is right. The docroot is a symlink to the current release
+# (/var/www/releases/<id>); Caddy resolves it on every request, so a deploy
+# swaps the symlink and never reloads Caddy.
+#
+# Applied by hand to /etc/caddy/Caddyfile (docs/INFRA.md "Changing the
+# Caddyfile"). The redirects and app fallbacks below must match
+# scripts/site-routes.mjs; scripts/check-caddy-routes.mjs (part of `npm test`)
+# fails when they drift.
+{
+	admin off
+}
+
+:80 {
+	encode zstd gzip
+
+	# The canonical host is www. The apex sends every path there.
+	@apex host therapistools.com
+	redir @apex https://www.therapistools.com{uri} 301
+
+	# Cloudflare forwards the scheme the visitor used. A plain http request
+	# on www gets sent back to https here, so nothing serves in the clear.
+	# Local smoke checks send no X-Forwarded-Proto and are not matched.
+	@insecure header X-Forwarded-Proto http
+	redir @insecure https://www.therapistools.com{uri} 301
+
+	# Site-wide security headers.
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(), usb=()"
+		-Server
+	}
+
+	# The Scheduler is locked to its own origin. The IEP Writer carries its
+	# own stricter CSP (connect-src 'none') inside its single HTML file.
+	header /scheduler/* {
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
+		X-Frame-Options "DENY"
+		Cross-Origin-Opener-Policy "same-origin"
+	}
+
+	# Browsers keep a copy of every response and ask before reusing it, so a
+	# deploy shows on the next page load. Vite's build output under assets/
+	# carries a content hash in each file name, never changes, and skips the
+	# check for a year.
+	#
+	# no-transform also stops Cloudflare editing responses on the way out.
+	# Load-bearing: a new zone has Cloudflare Web Analytics on, which injects
+	# a beacon script into every HTML page, and the site promises no
+	# analytics (apps/home/privacy/). Cloudflare skips the injection for
+	# no-transform responses; the dashboard switch is off too (docs/INFRA.md).
+	@hashed path_regexp ^/(worksheets|scheduler)/assets/
+	header @hashed Cache-Control "public, max-age=31536000, immutable, no-transform"
+	header ?Cache-Control "no-cache, no-transform"
+
+	# Permanent redirects (scripts/site-routes.mjs REDIRECTS).
+	# route: begin redirects
+	redir /worksheets/privacy /privacy/#worksheets 308
+	redir /worksheets/privacy/ /privacy/#worksheets 308
+	# route: end redirects
+
+	root * /var/www/therapistools
+
+	# Single-page apps: any unknown path under the prefix serves the app
+	# shell (scripts/site-routes.mjs SPA_FALLBACKS). Known files, prerendered
+	# pages (<path>/index.html) and <path>.html come first, the same order as
+	# scripts/preview-site.mjs.
+	# route: begin spa
+	handle /worksheets/* {
+		try_files {path} {path}/index.html {path}.html /worksheets/index.html
+		file_server
+	}
+	handle /scheduler/* {
+		try_files {path} {path}/index.html {path}.html /scheduler/index.html
+		file_server
+	}
+	# route: end spa
+
+	handle {
+		try_files {path} {path}/index.html {path}.html
+		file_server
+	}
+
+	handle_errors {
+		@notfound expression `{err.status_code} == 404`
+		respond @notfound "Not found" 404
+		header Cache-Control "no-cache, no-transform"
+	}
+}

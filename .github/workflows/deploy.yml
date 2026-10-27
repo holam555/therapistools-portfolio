@@ -1,0 +1,96 @@
+name: Deploy
+
+# Every push to main tests, builds and publishes the site to
+# https://www.therapistools.com. It runs on GitHub's cloud runners and
+# reaches the site host (homelab CT 138) over SSH through the site's
+# Cloudflare Tunnel (ssh.therapistools.com). The deploy key can only upload
+# into the releases folder and ask the host to publish a release
+# (infra/deploy-gate.sh); the host checks the release and swaps it in with
+# one symlink rename (infra/publish.sh). A failure before the swap leaves
+# the live site on the previous release. Details: docs/INFRA.md.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Deploys run in push order and never race the symlink swap.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARED_VERSION: 2026.8.3
+  # The host's SSH key. Not a secret; pinning it means a deploy can only
+  # ever talk to this box.
+  HOST_KEY: ssh.therapistools.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOB0/VO8Ij5+3+66qrsNKTs8pDgieCEmwuCsDbUFV6L8
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE: ${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm run install:all
+
+      - name: Test
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Set up SSH through the tunnel
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/cloudflared" \
+            "https://github.com/cloudflare/cloudflared/releases/download/$CLOUDFLARED_VERSION/cloudflared-linux-amd64"
+          chmod +x "$RUNNER_TEMP/cloudflared"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$HOST_KEY" > ~/.ssh/known_hosts
+          # printf, not a heredoc: indented heredocs break inside YAML run blocks.
+          printf 'Host deploy-target\n  HostName ssh.therapistools.com\n  User deploy\n  IdentityFile ~/.ssh/deploy_key\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n  ServerAliveInterval 15\n  ProxyCommand %s access ssh --hostname %%h\n' \
+            "$RUNNER_TEMP/cloudflared" > ~/.ssh/config
+          ssh deploy-target live
+
+      - name: Ship and publish the release
+        run: |
+          count=$(find dist -type f | wc -l)
+          # Paths are relative to /var/www/releases on the host.
+          rsync -az --delete --chmod=D755,F644 dist/ "deploy-target:$RELEASE/"
+          ssh deploy-target "publish $RELEASE $count"
+
+      - name: Check the live site
+        run: |
+          # What the host serves now is the truth, not the step exit codes above.
+          live=$(ssh deploy-target live)
+          [ "$live" = "/var/www/releases/$RELEASE" ] || { echo "live is $live, expected $RELEASE"; exit 1; }
+          for path in / /privacy/ /scheduler/ /iep/ /worksheets/ /worksheets/edit/trace-name; do
+            curl -fsS --retry 3 --retry-all-errors -o /dev/null "https://www.therapistools.com$path"
+          done
+          code=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' https://therapistools.com/iep/)
+          [ "$code" = "301 https://www.therapistools.com/iep/" ] || { echo "apex redirect: $code"; exit 1; }
+          # The site promises no analytics; Cloudflare must not have injected its beacon.
+          if curl -fsS https://www.therapistools.com/ | grep -q cloudflareinsights; then
+            echo "Cloudflare Web Analytics beacon found in the home page (docs/INFRA.md)"; exit 1
+          fi
+          echo "Live: https://www.therapistools.com ($RELEASE)"
+
+      - name: Remove the key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

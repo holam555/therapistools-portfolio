@@ -1,0 +1,14 @@
+{
+  "name": "therapistools",
+  "private": true,
+  "description": "Free browser tools for K-12 educators and school therapists: scheduler, IEP writer, worksheets.",
+  "type": "module",
+  "scripts": {
+    "install:all": "npm ci --prefix apps/worksheets && npm ci --prefix apps/scheduler && npm ci --prefix apps/iep",
+    "build": "node scripts/build-site.mjs",
+    "preview": "node scripts/preview-site.mjs",
+    "test": "node scripts/check-caddy-routes.mjs && bash scripts/test-publish.sh && npm test --prefix apps/worksheets && npm test --prefix apps/scheduler && npm test --prefix apps/iep",
+    "typecheck": "cd apps/worksheets && npx tsc --noEmit -p tsconfig.app.json && cd ../scheduler && npx tsc -b && cd ../iep && npx tsc --noEmit"
+  },
+  "engines": { "node": ">=20.19" }
+}

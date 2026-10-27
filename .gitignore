@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-ssr
+.DS_Store
+*.log
+*.local
+
+# Reference documents dropped in the root (may hold real report text); never commit
+/*.docx
+/*.pdf

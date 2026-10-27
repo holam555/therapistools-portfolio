@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Therapistools: free tools for K-12 educators and school therapists</title>
+  <meta name="description" content="Free tools for K-12 educators: special education teachers, school psychologists, and OT, speech and PT therapists. A caseload scheduler, an IEP writer and printable worksheets. No accounts. Your data stays on your device." />
+  <link rel="canonical" href="https://www.therapistools.com/" />
+  <meta property="og:title" content="Therapistools" />
+  <meta property="og:description" content="Free tools for K-12 educators and school therapists. No accounts. Your data stays on your device." />
+  <meta property="og:url" content="https://www.therapistools.com/" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2326968a'/%3E%3Cg fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round' transform='translate(4 4)'%3E%3Crect x='3' y='3' width='7' height='7'/%3E%3Crect x='14' y='3' width='7' height='7'/%3E%3Crect x='3' y='14' width='7' height='7'/%3E%3Ccircle cx='17.5' cy='17.5' r='3.5'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/shared/brand.css" />
+  <script type="module" src="/shared/suite-bar.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--tt-font-body); color: var(--tt-fg); font-size: 17px; line-height: 1.55; }
+    h1, h2, h3 { font-family: var(--tt-font-display); }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+    .hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: center; padding: 56px 0 24px; }
+    @media (max-width: 900px) { .hero { grid-template-columns: 1fr; padding-top: 36px; } .hero-art { display: none; } }
+    .hero h1 { font-size: clamp(2.1rem, 4.6vw, 3.1rem); line-height: 1.1; font-weight: 700; margin: 0 0 16px; letter-spacing: -0.01em; }
+    .scribble { position: relative; white-space: nowrap; }
+    .scribble svg { position: absolute; left: -2%; bottom: -10px; width: 104%; height: 14px; }
+    .hero p { font-size: 1.15rem; color: var(--tt-muted-fg); margin: 0 0 26px; max-width: 46ch; }
+    .cta { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .hero-art { position: relative; height: 300px; }
+    .sheet { position: absolute; width: 190px; height: 250px; background: #fff; border-radius: 10px; box-shadow: var(--tt-shadow-paper); outline: 1px solid rgba(0,0,0,.05); padding: 18px 16px; top: 22px; }
+    .sheet i { display: block; height: 7px; border-radius: 4px; background: var(--tt-muted); margin-bottom: 11px; }
+    .sheet i.t { width: 60%; height: 10px; background: color-mix(in srgb, var(--c) 35%, white); margin-bottom: 18px; }
+    .sheet i.s { width: 80%; }
+    .sheet i.dots { height: 3px; background: none; background-image: radial-gradient(circle, color-mix(in srgb, var(--c) 55%, transparent) 1.3px, transparent 1.5px); background-size: 10px 3px; }
+    .sheet.a { left: 4%; transform: rotate(-7deg); --c: var(--tt-cat-worksheets); }
+    .sheet.b { left: 30%; top: 4px; transform: rotate(1deg); --c: var(--tt-cat-scheduler); z-index: 2; }
+    .sheet.c { left: 56%; transform: rotate(7deg); --c: var(--tt-cat-iep); }
+    .grid-mini { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 6px; }
+    .grid-mini span { height: 22px; border-radius: 4px; background: var(--tt-muted); }
+    .grid-mini span.g { background: color-mix(in srgb, var(--tt-success) 30%, white); }
+
+    .section-title { font-size: 1.5rem; margin: 40px 0 6px; }
+    .section-sub { color: var(--tt-muted-fg); margin: 0 0 26px; }
+    .tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; }
+    @media (max-width: 900px) { .tools { grid-template-columns: 1fr; } }
+    .tool { position: relative; display: flex; flex-direction: column; padding: 26px 22px 22px; text-decoration: none; color: inherit;
+      transform: rotate(var(--rot, 0deg)); transition: transform .2s cubic-bezier(.22,1,.36,1), border-color .2s ease; }
+    .tool:hover, .tool:focus-visible { transform: rotate(0deg) translateY(-5px); border-color: color-mix(in srgb, var(--tape) 45%, var(--tt-border)); }
+    .tool:focus-visible { outline: 3px solid color-mix(in srgb, var(--tape) 45%, white); outline-offset: 3px; }
+    .tool .tt-badge { align-self: flex-start; background: color-mix(in srgb, var(--tape) 13%, white); color: color-mix(in srgb, var(--tape) 80%, black); }
+    .tool h3 { font-size: 1.45rem; margin: 10px 0 6px; }
+    .tool p { margin: 0 0 18px; color: var(--tt-muted-fg); flex: 1; }
+    .tool .go { font-family: var(--tt-font-display); font-weight: 700; color: color-mix(in srgb, var(--tape) 85%, black); }
+    .offline { margin: 14px 0 0; font-size: .95rem; color: var(--tt-muted-fg); }
+    .offline a { color: color-mix(in srgb, var(--tt-cat-iep) 85%, black); font-weight: 700; }
+
+    .tt-dotted-divider { margin: 46px 0 34px; }
+    .promise { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    @media (max-width: 900px) { .promise { grid-template-columns: 1fr; } }
+    .promise .tt-card { padding: 20px 22px; box-shadow: var(--tt-shadow-sm); }
+    .promise h3 { font-size: 1.1rem; margin: 0 0 4px; }
+    .promise p { margin: 0; color: var(--tt-muted-fg); font-size: .95rem; }
+    .hand { font-family: var(--tt-font-display); color: var(--tt-secondary); font-weight: 600; }
+
+    .file-warning { background: var(--tt-warning-soft); border: 1px solid #f1deae; border-radius: var(--tt-radius); padding: 14px 18px; margin-top: 20px; }
+    .file-warning code { background: #fff; padding: 1px 6px; border-radius: 6px; }
+    footer { margin-top: 56px; padding: 26px 0 40px; color: var(--tt-muted-fg); font-size: .9rem; border-top: 1px solid var(--tt-border); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    footer a { color: inherit; }
+    @media (prefers-reduced-motion: reduce) { .tool, .tool:hover { transform: none; transition: none; } }
+  </style>
+</head>
+<body class="tt-paper-bg">
+  <tt-suite-bar current="home"></tt-suite-bar>
+  <div class="wrap">
+    <div id="file-warning" class="file-warning" hidden>
+      This page was opened as a file, so the tool links can't work. In Terminal, open the therapistools folder and run
+      <code>npm run preview</code>, then go to <a href="http://localhost:4300">http://localhost:4300</a>.
+    </div>
+    <script>
+      // The tools need a web server; a double-clicked file can't reach them.
+      if (location.protocol === "file:") document.getElementById("file-warning").hidden = false;
+    </script>
+
+    <main>
+      <section class="hero">
+        <div>
+          <h1>Less paperwork,<br />more time <span class="scribble">with students<svg viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M2 9 C 40 3, 80 13, 120 6 S 180 4, 198 8" fill="none" stroke="hsl(25 85% 55%)" stroke-width="4" stroke-linecap="round"/></svg></span></h1>
+          <p>Free tools for K-12 educators: special education teachers, school psychologists, and therapists in OT, speech and PT. Plan your caseload, draft IEP sections in your own words, and print practice worksheets.</p>
+          <div class="cta">
+            <a class="tt-btn" href="/iep/">Start an IEP draft</a>
+          </div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="sheet a" style="--c: var(--tt-cat-scheduler)"><i class="t"></i><div class="grid-mini"><span></span><span class="g"></span><span></span><span class="g"></span><span class="g"></span><span></span><span class="g"></span><span></span><span></span><span class="g"></span><span></span><span class="g"></span></div></div>
+          <div class="sheet b" style="--c: var(--tt-cat-iep)"><i class="t"></i><i></i><i class="s"></i><i></i><i></i><i class="s"></i><i></i><i class="s"></i></div>
+          <div class="sheet c" style="--c: var(--tt-cat-worksheets)"><i class="t"></i><i class="dots"></i><i class="dots"></i><i class="dots"></i><i class="s"></i><i></i><i class="dots"></i><i class="dots"></i></div>
+        </div>
+      </section>
+
+      <h2 class="section-title" id="tools">Three tools, one place</h2>
+      <p class="section-sub">Each one works on its own. Nothing to install and nothing to sign up for.</p>
+      <section class="tools" aria-label="Tools">
+        <a class="tool tt-card" href="/scheduler/" style="--tape: var(--tt-cat-scheduler); --rot: -1deg">
+          <span class="tt-tape" aria-hidden="true"></span>
+          <span class="tt-badge">Plan</span>
+          <h3>Scheduler</h3>
+          <p>See every student's open time next to your own, and book sessions without double-booking anyone.</p>
+          <span class="go">Open Scheduler</span>
+        </a>
+        <a class="tool tt-card" href="/iep/" style="--tape: var(--tt-cat-iep); --rot: 0.8deg">
+          <span class="tt-tape" aria-hidden="true"></span>
+          <span class="tt-badge">Write</span>
+          <h3>IEP Writer</h3>
+          <p>Draft present levels, goals and objectives from your own sentence bank. Pick your discipline: OT includes a starter library, and SLP, PT, psychology and special education build their own.</p>
+          <span class="go">Open IEP Writer</span>
+        </a>
+        <a class="tool tt-card" href="/worksheets/" style="--tape: var(--tt-cat-worksheets); --rot: -0.6deg">
+          <span class="tt-tape" aria-hidden="true"></span>
+          <span class="tt-badge">Print</span>
+          <h3>Worksheets</h3>
+          <p>Fine motor, handwriting and visual perception worksheets for ages 2 to 12. Pick a template, adjust it, print.</p>
+          <span class="go">Open Worksheets</span>
+        </a>
+      </section>
+      <p class="offline">Prefer working offline? <a href="/iep/therapistools-iep-writer.html" download>Download the IEP Writer as one file</a> and open it in Chrome.</p>
+
+      <div class="tt-dotted-divider" role="presentation"></div>
+
+      <section class="promise" aria-label="Privacy">
+        <div class="tt-card"><h3>No accounts</h3><p>Nothing to sign up for. Open a tool and start.</p></div>
+        <div class="tt-card"><h3>No student names</h3><p>Students are placeholders or ID numbers. Names are never saved.</p></div>
+        <div class="tt-card"><h3>Stays on your device</h3><p>Your work lives in your own browser. Export a backup file any time. <a href="/privacy/">How we handle data</a></p></div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Therapistools. Made by a school-based occupational therapist. <a href="/privacy/">Privacy</a></span>
+      <span class="hand">Free, private, and built for real school days.</span>
+    </footer>
+  </div>
+</body>
+</html>

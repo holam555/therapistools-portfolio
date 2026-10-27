@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy · Therapistools</title>
+  <meta name="description" content="How Therapistools handles data: no accounts, no student or child names stored, and your work stays in your own browser." />
+  <link rel="canonical" href="https://www.therapistools.com/privacy/" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2326968a'/%3E%3Cg fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round' transform='translate(4 4)'%3E%3Crect x='3' y='3' width='7' height='7'/%3E%3Crect x='14' y='3' width='7' height='7'/%3E%3Crect x='3' y='14' width='7' height='7'/%3E%3Ccircle cx='17.5' cy='17.5' r='3.5'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/shared/brand.css" />
+  <script type="module" src="/shared/suite-bar.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--tt-font-body); color: var(--tt-fg); font-size: 17px; line-height: 1.6; }
+    h1, h2, h3 { font-family: var(--tt-font-display); line-height: 1.2; }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 0 20px 60px; }
+    h1 { font-size: clamp(2rem, 4vw, 2.6rem); margin: 44px 0 6px; }
+    .updated { color: var(--tt-muted-fg); margin: 0 0 26px; font-size: .95rem; }
+    .short { padding: 22px 24px; margin-bottom: 30px; border-left: 5px solid var(--tt-primary); }
+    .short h2 { margin: 0 0 8px; font-size: 1.25rem; }
+    .short ul { margin: 0; padding-left: 1.2rem; }
+    .short li { margin: 4px 0; }
+    section { margin: 34px 0; }
+    section h2 { font-size: 1.4rem; margin: 0 0 10px; display: flex; align-items: center; gap: 10px; }
+    section h2 .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    section h3 { font-size: 1.05rem; margin: 18px 0 6px; }
+    p { margin: 0 0 12px; }
+    ul { margin: 0 0 12px; padding-left: 1.2rem; }
+    li { margin: 4px 0; }
+    a { color: var(--tt-primary); font-weight: 600; text-underline-offset: 2px; }
+    table { width: 100%; border-collapse: collapse; margin: 6px 0 14px; font-size: .96rem; background: var(--tt-card); border-radius: var(--tt-radius); overflow: hidden; box-shadow: var(--tt-shadow-sm); }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--tt-border); vertical-align: top; }
+    th { font-family: var(--tt-font-display); font-weight: 600; background: var(--tt-muted); }
+    tr:last-child td { border-bottom: 0; }
+    .yes { color: hsl(152 55% 30%); font-weight: 700; }
+    .no { color: var(--tt-muted-fg); }
+    footer { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--tt-border); color: var(--tt-muted-fg); font-size: .92rem; }
+    footer a { color: inherit; }
+  </style>
+</head>
+<body class="tt-paper-bg">
+  <tt-suite-bar current="privacy"></tt-suite-bar>
+  <main class="wrap">
+    <h1>Privacy</h1>
+    <p class="updated">Covers every Therapistools tool. Last updated 26 October 2026.</p>
+
+    <div class="tt-card short">
+      <h2>The short version</h2>
+      <ul>
+        <li>There are no accounts, no sign-ups and no server that stores your work.</li>
+        <li>Everything you make is saved in your own browser, on your own device.</li>
+        <li>No tool saves a child's or student's name. Students are placeholders or ID numbers.</li>
+        <li>Nothing you type is sent to us or to anyone else.</li>
+        <li>No page counts visits or uses analytics of any kind.</li>
+      </ul>
+    </div>
+
+    <section id="names">
+      <h2>Children's and students' names</h2>
+      <p>No Therapistools tool stores a real name.</p>
+      <ul>
+        <li><strong>Worksheets:</strong> you can type a child's name onto a worksheet, for example to trace it. That name is used for that printout only. It is never saved, it is not kept in your print history, and it is left out of share links. Child profiles use a nickname such as "Fox" instead of a name.</li>
+        <li><strong>Scheduler:</strong> there is no field for a name. Students are numbers assigned by the app. Keep your list of which number is which student somewhere your school already trusts.</li>
+        <li><strong>IEP Writer:</strong> there is no field for a name, birth date, school or ID. The student is always written as [STUDENT], and a privacy check warns you before copying if text looks like a name, date or phone number.</li>
+      </ul>
+      <p>Other text you type is saved with your work on this device, such as handwriting practice words or your own sentences. Keep names out of those, and use the name field on the worksheet instead.</p>
+    </section>
+
+    <section id="stored">
+      <h2>What each tool saves, and where</h2>
+      <p>All of this lives in your browser's local storage on the device you are using. It is never uploaded. A different browser or device will not see it, which is why each tool lets you export a backup file.</p>
+      <table>
+        <thead><tr><th>Tool</th><th>Saved on your device</th><th>Never saved</th></tr></thead>
+        <tbody>
+          <tr id="worksheets"><td><strong>Worksheets</strong></td><td>Your settings for each worksheet, print history, and child profiles with a nickname, age band and favorite themes.</td><td>Any child's name.</td></tr>
+          <tr id="scheduler"><td><strong>Scheduler</strong></td><td>Schools, providers, students as ID numbers, grade schedules, booked sessions and planning rules. Spreadsheets you upload are read in the browser and only the result is saved.</td><td>Student names.</td></tr>
+          <tr id="iep"><td><strong>IEP Writer</strong></td><td>Your sentence library, saved recipes, and the draft you are working on.</td><td>Student names or any identifying details.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="leaves">
+      <h2>What leaves your device</h2>
+      <table>
+        <thead><tr><th>What</th><th>Home and Privacy</th><th>Worksheets</th><th>Scheduler</th><th>IEP Writer</th></tr></thead>
+        <tbody>
+          <tr><td>Anything you type</td><td class="no">Never</td><td class="no">Never</td><td class="no">Never</td><td class="no">Never</td></tr>
+          <tr><td>Visit counts or analytics</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Fonts from another company</td><td class="no">No</td><td class="yes">Yes, Google Fonts</td><td class="no">No</td><td class="no">No</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="analytics">No visit counts</h3>
+      <p>No page on this site counts visits, uses analytics or sets cookies. The IEP Writer goes further: once loaded, it blocks every network connection, so it cannot send anything even by mistake.</p>
+
+      <h3>Fonts</h3>
+      <p>The Worksheets pages load some fonts from Google Fonts, so Google receives a standard request, including your IP address, when those pages open. Every other page uses fonts served from this site. We plan to move Worksheets onto our own fonts too.</p>
+
+      <h3>The web host</h3>
+      <p>The site runs on our own server. Requests reach it through Cloudflare, which protects the server and delivers the pages quickly. Like every web service, the server and Cloudflare receive standard request details, such as your IP address and which page was requested, in order to send you the page. We do not use those details to track anyone. Neither ever receives your work, because your work is never sent anywhere.</p>
+
+      <h3>Forms you choose to open</h3>
+      <p>The Scheduler has "Give feedback" and "Get updates" buttons. They open forms hosted by Tally in a new tab. Nothing is sent unless you fill one in and submit it, and only what you type into the form.</p>
+    </section>
+
+    <section id="control">
+      <h2>You are in control</h2>
+      <ul>
+        <li><strong>Back up:</strong> each tool can export your work to a file, which you keep.</li>
+        <li><strong>Delete:</strong> clearing this site's data in your browser settings removes everything Therapistools saved on that device. You can also remove child profiles one by one in Worksheets.</li>
+        <li><strong>Offline:</strong> the IEP Writer can be downloaded as a single file and used with no internet connection.</li>
+      </ul>
+      <p>There are no ads, nothing is sold, and nothing is shared with anyone.</p>
+    </section>
+
+    <section id="schools">
+      <h2>For schools</h2>
+      <p>The tools are designed so student names never need to exist in them, which supports your obligations under laws such as FERPA. Compliance still depends on how the tools are used. Follow your district's policies, and keep the number-to-student key out of these tools.</p>
+    </section>
+
+    <section id="questions">
+      <h2>Questions</h2>
+      <p>Send a question or a correction through the <a id="feedback-link" href="https://tally.so/r/VLWjRj" target="_blank" rel="noopener">feedback form</a>.</p>
+    </section>
+
+    <footer><a href="/">Therapistools</a>. Free tools for K-12 educators and school therapists.</footer>
+  </main>
+  <script type="module">
+    // Keep the form address in one place (shared/brand.js).
+    import { FEEDBACK_URL } from "/shared/brand.js";
+    document.getElementById("feedback-link").href = FEEDBACK_URL;
+  </script>
+</body>
+</html>
