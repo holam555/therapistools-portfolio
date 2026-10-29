@@ -19,8 +19,8 @@ describe("a pack copied from the OT template", () => {
       for (const reportType of ["evaluation", "annual"] as const)
         for (const concerns of [true, false])
           for (const pronoun of ["he", "she"] as const) {
-            // The copy fixes what OT decides at report time: the teacher wording follows the result, and the goal lists every standard.
-            const setup: ReportSetup = { ...withGrade(defaultSetup(), g.id), reportType, concerns, teacherConcerns: concerns, pronoun, goalAreas: ["writing", "cutting", "selfcare"] };
+            // The copy fixes what OT decides at report time: every teacher area follows the result, services are direct, and the goal lists every standard.
+            const setup: ReportSetup = { ...withGrade(defaultSetup(), g.id), reportType, concerns, teacherAreas: { fine: concerns, gross: concerns, sensory: concerns }, pronoun, goalAreas: ["writing", "cutting", "selfcare"] };
             expect(texts(packSections(pack, setup), pronoun), `${g.id} ${reportType} ${concerns}`).toEqual(texts(otReportSections(setup), pronoun));
           }
   });
@@ -30,7 +30,7 @@ describe("a pack copied from the OT template", () => {
     expect(pack.assessments.find((a) => a.id === "spm2")!.grid!.groups[0].rows.length).toBe(9);
     expect(pack.assessments.find((a) => a.id === "screen")!.sections.map((s) => s.when?.grades)).toEqual([["k1"], ["g25"], ["g68", "g912"]]);
     const teacher = pack.assessments[0].sections.find((s) => s.id === "teacher-concerns")!;
-    expect(teacher.examples.length).toBe(2);
+    expect(teacher.examples.length).toBe(3);
     expect(pack.lists.grasp.options).toContain("tripod");
     expect(pack.titles).toEqual({ evaluation: "Physical therapy Evaluation Report", annual: "Physical therapy Annual Review" });
   });
@@ -46,7 +46,8 @@ describe("a pack copied from the OT template", () => {
 
   it("drops an assessment that was not done", () => {
     const setup: ReportSetup = { ...defaultSetup(), assessments: { beery: false, spm2: false } };
-    expect(packSections(pack, setup).map((s) => s.id)).toEqual(["teacher-concerns", "screen-g25", "summary-concerns"]);
+    expect(packSections(pack, setup).map((s) => s.id)).toEqual(["teacher-concerns", "screen-g25", "summary-concerns", "next-steps", "impact", "service", "goal"]);
+    expect(packSections(pack, { ...setup, concerns: false }).map((s) => s.id)).toEqual(["teacher-none", "screen-g25", "summary-none"]);
   });
 
   it("survives the backup file and storage unchanged", () => {

@@ -8,7 +8,7 @@ import { loadSetup, loadValues, migrateValueKeys, saveSetup, saveValues, withGra
 import { BUILT_IN_GRIDS, applyScreenOverrides, emptyOverrides, gridFor, hasOverrides, listFor, loadOverrides, saveOverrides, type BlockOverride, type TemplateOverrides } from "../report/overrides";
 import { OPTION_LISTS } from "../report/options";
 import { blockKeyOf } from "../report/render";
-import { GRADE_GROUPS, type AssessmentId, type Block, type GoalArea, type ReportSetup, type ReportValues, type ScreenItem } from "../report/types";
+import { GRADE_GROUPS, TEACHER_AREAS, type AssessmentId, type Block, type GoalArea, type ReportSetup, type ReportValues, type ScreenItem } from "../report/types";
 import { AddScreenItemModal, EditBlockModal, GridEditorModal, ListEditorModal, TitleEditorModal } from "./TemplateEditors";
 import { PackReportBuilder } from "./PackReportBuilder";
 import { RatingPanel, ReportOutput } from "./ReportOutput";
@@ -218,9 +218,13 @@ function OtReportBuilder() {
                 {a.label}
               </label>
               {a.id === "teacher" && setup.assessments.teacher && (
-                <span className="seg seg-sm">
-                  <button type="button" className={setup.teacherConcerns ? "on" : ""} onClick={() => patch({ teacherConcerns: true })}>With concerns</button>
-                  <button type="button" className={!setup.teacherConcerns ? "on" : ""} onClick={() => patch({ teacherConcerns: false })}>No concerns</button>
+                <span className="row gap wrap teacher-areas">
+                  <span className="hint">Concerns in:</span>
+                  {TEACHER_AREAS.map((t) => (
+                    <label key={t.id} className="check">
+                      <input type="checkbox" checked={setup.teacherAreas[t.id]} onChange={(e) => patch({ teacherAreas: { ...setup.teacherAreas, [t.id]: e.target.checked } })} /> {t.label}
+                    </label>
+                  ))}
                 </span>
               )}
               {a.id === "screen" && setup.assessments.screen && (
@@ -281,9 +285,16 @@ function OtReportBuilder() {
           ))}
         </ul>
 
-        {setup.reportType === "annual" && setup.concerns && (
+        {setup.concerns && (
           <>
-            <h3>Motor goal</h3>
+            <h3>Services and goal</h3>
+            <div className="setup-row">
+              <span className="setup-label">Service</span>
+              <span className="seg">
+                <button type="button" className={setup.serviceType === "direct" ? "on" : ""} onClick={() => patch({ serviceType: "direct" })}>Direct</button>
+                <button type="button" className={setup.serviceType === "indirect" ? "on" : ""} onClick={() => patch({ serviceType: "indirect" })}>Indirect</button>
+              </span>
+            </div>
             <div className="setup-row">
               <span className="setup-label">Objectives</span>
               <span className="seg">

@@ -48,7 +48,7 @@ export const OPTION_LISTS: Record<string, OptionList> = {
     ],
   },
   minutes: {
-    options: ["15 minutes monthly", "30 minutes monthly", "60 minutes monthly", "120 minutes monthly", "30 minutes weekly", "60 minutes weekly", "90 minutes weekly"],
+    options: ["15 minutes quarterly", "30 minutes quarterly", "15 minutes monthly", "30 minutes monthly", "60 minutes monthly", "120 minutes monthly", "30 minutes weekly", "60 minutes weekly", "90 minutes weekly"],
   },
   location: { options: ["outside the classroom", "inside the classroom", "both inside and outside the classroom"] },
   skillAreas: {

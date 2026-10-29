@@ -17,8 +17,9 @@ function allSetups(): ReportSetup[] {
   for (const g of GRADE_GROUPS)
     for (const reportType of ["evaluation", "annual"] as const)
       for (const concerns of [true, false])
-        for (const teacherConcerns of [true, false])
-          for (const pronoun of ["he", "she"] as const) out.push({ ...withGrade(defaultSetup(), g.id), reportType, concerns, teacherConcerns, pronoun });
+        for (const teacherAreas of [{ fine: true, gross: true, sensory: true }, { fine: false, gross: true, sensory: false }, { fine: false, gross: false, sensory: false }])
+          for (const serviceType of ["direct", "indirect"] as const)
+            for (const pronoun of ["he", "she"] as const) out.push({ ...withGrade(defaultSetup(), g.id), reportType, concerns, teacherAreas, serviceType, pronoun });
   return out;
 }
 
@@ -83,10 +84,11 @@ describe("OT report template", () => {
 
   it("builds the right sections for each report", () => {
     const ids = (p: Partial<ReportSetup>) => otReportSections({ ...defaultSetup(), ...p }).map((s) => s.id);
-    expect(ids({ reportType: "evaluation" })).toEqual(["teacher", "screen", "beery", "spm2", "summary"]);
+    expect(ids({ reportType: "evaluation" })).toEqual(["teacher", "screen", "beery", "spm2", "summary", "next-steps", "impact", "service", "goal"]);
+    expect(ids({ reportType: "evaluation", concerns: false })).toEqual(["teacher", "screen", "beery", "spm2", "summary"]);
     expect(ids({ reportType: "annual", concerns: true })).toEqual(["plop-header", "teacher", "screen", "beery", "spm2", "next-steps", "impact", "service", "goal"]);
     expect(ids({ reportType: "annual", concerns: false })).toEqual(["plop-header", "teacher", "screen", "beery", "spm2", "ending"]);
-    expect(ids({ reportType: "evaluation", assessments: { teacher: false, screen: true, beery: false, spm2: false } })).toEqual(["screen", "summary"]);
+    expect(ids({ reportType: "evaluation", concerns: false, assessments: { teacher: false, screen: true, beery: false, spm2: false } })).toEqual(["screen", "summary"]);
     const header = otReportSections({ ...defaultSetup(), reportType: "annual" })[0];
     expect(sectionText(header, "he")).toContain("[[Paste the record review and progress toward goals from last year's review, then update it]]");
   });
@@ -99,10 +101,33 @@ describe("OT report template", () => {
     expect(text).not.toContain("WLP.1.1");
   });
 
+  it("writes the teacher checklist one area at a time", () => {
+    const text = (areas: ReportSetup["teacherAreas"]) => sectionText(otReportSections({ ...defaultSetup(), teacherAreas: areas }).find((s) => s.id === "teacher")!, "she");
+    const sensoryOnly = text({ fine: false, gross: false, sensory: true });
+    expect(sensoryOnly).toContain("[STUDENT] demonstrates age and grade level fine motor skills 80-100%");
+    expect(sensoryOnly).toContain("Gross motor skills are 80-100% as compared to peers");
+    expect(sensoryOnly).toContain("noting that she [[sensory behaviors noted by the teacher]]");
+    expect(sensoryOnly).toContain("accommodations such as [[accommodations in use]] are used.");
+    const grossOnly = text({ fine: false, gross: true, sensory: false });
+    expect(grossOnly).toContain("Gross motor concerns were also reported: she [[gross motor difficulties and how often]]");
+    expect(grossOnly).toContain("The sensory area is listed as no concerns");
+    expect(grossOnly).not.toContain("[[fine motor delays and how often]]");
+    const none = text({ fine: false, gross: false, sensory: false });
+    expect(none).toContain("Record review and analysis of the teacher rating checklist form");
+    expect(none).not.toContain("accommodations");
+  });
+
+  it("writes a direct or an indirect service statement for any report with concerns", () => {
+    const service = (p: Partial<ReportSetup>) => sectionText(otReportSections({ ...defaultSetup(), ...p }).find((s) => s.id === "service")!, "he");
+    expect(service({ reportType: "evaluation" })).toContain("[[minutes and frequency]] of occupational therapy will be provided [[inside or outside the classroom]]");
+    expect(service({ reportType: "annual", serviceType: "indirect" })).toContain("[STUDENT] will receive [[minutes and frequency]] of indirect Occupational Therapy services to support [[skill areas]]. These services will consist of collaborating with his special education team");
+    expect(otReportSections({ ...defaultSetup(), reportType: "evaluation", concerns: false }).some((s) => s.id === "service")).toBe(false);
+  });
+
   it("keeps the summary's no-concerns and with-concerns versions apart", () => {
-    const none = sectionText(otReportSections({ ...defaultSetup(), concerns: false }).at(-1)!, "he");
+    const none = sectionText(otReportSections({ ...defaultSetup(), concerns: false }).find((s) => s.id === "summary")!, "he");
     expect(none).toContain("there are no motor or sensory concerns");
-    const some = sectionText(otReportSections({ ...defaultSetup(), concerns: true }).at(-1)!, "he");
+    const some = sectionText(otReportSections({ ...defaultSetup(), concerns: true }).find((s) => s.id === "summary")!, "he");
     expect(some).toContain("Fine Motor:");
       });
 });
@@ -129,7 +154,7 @@ describe("section prompts", () => {
 
   it("only offers prompts for sections with blanks to fill", () => {
     const withPrompts = sections.filter((s) => needsPrompt(s, "she")).map((s) => s.id);
-    expect(withPrompts).toEqual(["teacher", "screen", "summary"]);
+    expect(withPrompts).toEqual(["teacher", "screen", "summary", "next-steps", "impact", "service", "goal"]);
     expect(blanksIn(sections.find((s) => s.id === "beery")!, "she").length).toBeGreaterThan(0);
   });
 
@@ -213,7 +238,7 @@ describe("SPM-2 scales", () => {
     expect(text).toContain("Typical Processing: Social Participation, Hearing, Taste and Smell, Body Awareness, Balance and Motion, and Sensory Total");
     expect(text).toContain("Moderate Difficulties: Planning and Ideas");
     expect(text).toContain("Severe Difficulties: Vision and Touch");
-    const summary = sectionText(otReportSections(setup).at(-1)!, "he");
+    const summary = sectionText(otReportSections(setup).find((s) => s.id === "summary")!, "he");
     expect(summary).toContain("sensorimotor skills are affected with Severe Difficulties for Vision and Touch and Moderate Difficulties for Planning and Ideas.");
     expect(spmSummaryPhrase(all("typical"))).toBe("within the typical range across all areas");
   });
@@ -258,7 +283,7 @@ describe("editable rating grids", () => {
     expect(text).toContain("Typical Processing, Moderate Difficulties, or Definite Dysfunction");
     expect(text).toContain("Definite Dysfunction: Vision");
     expect(text).toContain("Moderate Difficulties: Total");
-    expect(sectionText(sections.at(-1)!, "he")).toContain("affected with Definite Dysfunction for Vision and Moderate Difficulties for Total.");
+    expect(sectionText(sections.find((s) => s.id === "summary")!, "he")).toContain("affected with Definite Dysfunction for Vision and Moderate Difficulties for Total.");
   });
 
   it("keeps edited grids and titles through storage, dropping broken ones", () => {
@@ -315,8 +340,8 @@ describe("template edits", () => {
   it("keeps teacher-checklist versions apart when one is edited", () => {
     const o = emptyOverrides();
     o.blocks["teacher/teacher-concerns"] = { text: "Concerns were reported." };
-    const withConcerns = otReportSections({ ...defaultSetup(), teacherConcerns: true }, o).find((s) => s.id === "teacher")!;
-    const without = otReportSections({ ...defaultSetup(), teacherConcerns: false }, o).find((s) => s.id === "teacher")!;
+    const withConcerns = otReportSections({ ...defaultSetup(), teacherAreas: { fine: true, gross: false, sensory: false } }, o).find((s) => s.id === "teacher")!;
+    const without = otReportSections({ ...defaultSetup(), teacherAreas: { fine: false, gross: false, sensory: false } }, o).find((s) => s.id === "teacher")!;
     expect(sectionText(withConcerns, "he")).toContain("Concerns were reported.");
     expect(sectionText(without, "he")).toContain("Record review and analysis of the teacher rating checklist form");
   });
@@ -343,7 +368,7 @@ describe("template edits", () => {
   });
 
   it("moves values saved by position to the block's id", () => {
-    const setup = { ...defaultSetup(), teacherConcerns: true };
+    const setup = { ...defaultSetup(), teacherAreas: { fine: true, gross: false, sensory: false } };
     const migrated = migrateValueKeys({ "teacher/0/0": "general education teacher", "screen/g25-grasp/0": "tripod" }, otReportSections(setup));
     expect(migrated).toEqual({ "teacher/teacher-concerns/0": "general education teacher", "screen/g25-grasp/0": "tripod" });
   });

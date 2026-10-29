@@ -152,17 +152,18 @@ function copySection(s: ReportSection, extra: Partial<PackSection> = {}): PackSe
 /**
  * The built-in OT template as a pack, for another discipline to start from.
  * What the OT code decides from setup becomes conditions: the teacher
- * checklist's two wordings follow "concerns", the fine motor screen has one
- * section per grade group with every item, and the goal lists three
- * objectives and every standard, to hide what isn't needed.
+ * checklist follows "concerns" (every area, or none), the fine motor screen
+ * has one section per grade group with every item, services are direct, and
+ * the goal lists three objectives and every standard, to hide what isn't
+ * needed.
  */
 export function packFromOt(disciplineLabel: string): TemplatePack {
   const base = defaultSetup();
   const build = (p: Partial<ReportSetup>) => otReportSections({ ...base, ...p });
   const pick = (sections: ReportSection[], id: string) => sections.find((s) => s.id === id)!;
 
-  const evalWith = build({ reportType: "evaluation", concerns: true, teacherConcerns: true });
-  const evalWithout = build({ reportType: "evaluation", concerns: false, teacherConcerns: false });
+  const evalWith = build({ reportType: "evaluation", concerns: true, teacherAreas: { fine: true, gross: true, sensory: true } });
+  const evalWithout = build({ reportType: "evaluation", concerns: false, teacherAreas: { fine: false, gross: false, sensory: false } });
   const annualWith = build({ reportType: "annual", concerns: true, objectives: 3, goalAreas: ["writing", "cutting", "selfcare"] });
   const annualWithout = build({ reportType: "annual", concerns: false });
 
@@ -185,7 +186,7 @@ export function packFromOt(disciplineLabel: string): TemplatePack {
     copySection(pick(evalWith, "summary"), { id: "summary-concerns", place: "after", when: { reportType: "evaluation", concerns: true } }),
     copySection(pick(evalWithout, "summary"), { id: "summary-none", place: "after", when: { reportType: "evaluation", concerns: false } }),
     copySection(pick(annualWith, "plop-header"), { place: "before", when: { reportType: "annual" } }),
-    ...["next-steps", "impact", "service", "goal"].map((id) => copySection(pick(annualWith, id), { place: "after", when: { reportType: "annual", concerns: true } })),
+    ...["next-steps", "impact", "service", "goal"].map((id) => copySection(pick(annualWith, id), { place: "after", when: { concerns: true } })),
     copySection(pick(annualWithout, "ending"), { place: "after", when: { reportType: "annual", concerns: false } }),
   ];
 

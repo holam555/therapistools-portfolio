@@ -24,6 +24,14 @@ export const GRADE_GROUPS: { id: GradeGroup; label: string }[] = [
 
 export type AssessmentId = "teacher" | "screen" | "beery" | "spm2";
 export type GoalArea = "writing" | "cutting" | "selfcare";
+export type TeacherArea = "fine" | "gross" | "sensory";
+export type TeacherAreas = Record<TeacherArea, boolean>;
+export const TEACHER_AREAS: { id: TeacherArea; label: string }[] = [
+  { id: "fine", label: "Fine motor" },
+  { id: "gross", label: "Gross motor" },
+  { id: "sensory", label: "Sensory" },
+];
+export type ServiceType = "direct" | "indirect";
 
 export interface ReportSetup {
   reportType: ReportType;
@@ -33,8 +41,10 @@ export interface ReportSetup {
   pronoun: PronounSet;
   /** Which assessments were done, by id (OT's are AssessmentId; a pack's are its own). Missing means done. */
   assessments: Record<string, boolean>;
-  /** The teacher rating checklist reported concerns. */
-  teacherConcerns: boolean;
+  /** Which areas the teacher rating checklist reported concerns in; none ticked means no concerns. */
+  teacherAreas: TeacherAreas;
+  /** How services are delivered when the student qualifies. */
+  serviceType: ServiceType;
   /** Fine motor screen items done, by item id. Items for other grades are ignored. */
   screenItems: string[];
   /** Annual review with services: number of objectives under the motor goal. */

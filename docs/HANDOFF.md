@@ -67,9 +67,13 @@ to Vercel, so there are no old addresses to redirect.
 - **IEP report builder** (the Report tab, `apps/iep/src/report/`):
   - Two report types. Evaluation: chosen assessments plus a summary.
     Annual review: "Reported by", a placeholder to paste last year's record
-    review, the assessments as present levels, then next steps or a
-    no-concerns ending, plus impact, service delivery and the motor goal only
-    when the student qualifies.
+    review, the assessments as present levels, then a no-concerns ending.
+    Both add next steps, impact, service delivery and the motor goal when
+    concerns are found or the student qualifies (owner's request, 2026-10-28).
+  - The teacher rating checklist is ticked per area (fine motor, gross
+    motor, sensory) and writes one paragraph per area; none ticked gives
+    the no-concerns paragraph. Services are direct or indirect; the indirect
+    statement follows the owner's district wording, with a fictional sample.
   - Only the informal fine motor screen depends on grade: K–1, 2–5, 6–8.
     9–12 has no template yet and borrows 6–8.
   - Word draft: fixed wording and sentence openers written in, he or she

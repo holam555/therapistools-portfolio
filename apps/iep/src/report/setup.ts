@@ -13,7 +13,8 @@ export function defaultSetup(grade: GradeGroup = "g25"): ReportSetup {
     grade,
     pronoun: "he",
     assessments: { teacher: true, screen: true, beery: true, spm2: true },
-    teacherConcerns: true,
+    teacherAreas: { fine: true, gross: false, sensory: false },
+    serviceType: "direct",
     screenItems: screenItemsFor(grade).map((i) => i.id),
     objectives: 3,
     goalAreas: ["writing", "cutting"],
@@ -78,8 +79,8 @@ export function loadSetup(d: DisciplineId): ReportSetup {
   try {
     const raw = localStorage.getItem(KEY(d));
     if (!raw) return defaultSetup();
-    // Older setups kept SPM-2 ratings in their own field.
-    const { spm, ...p } = JSON.parse(raw) as Partial<ReportSetup> & { spm?: Record<string, string> };
+    // Older setups kept SPM-2 ratings in their own field and a single yes/no for teacher concerns.
+    const { spm, teacherConcerns, ...p } = JSON.parse(raw) as Partial<ReportSetup> & { spm?: Record<string, string>; teacherConcerns?: boolean };
     const base = defaultSetup(GRADE_GROUPS.some((g) => g.id === p.grade) ? (p.grade as GradeGroup) : "g25");
     const ratings: ReportSetup["ratings"] = {};
     if (p.ratings && typeof p.ratings === "object") for (const [k, v] of Object.entries(p.ratings)) if (v && typeof v === "object") ratings[k] = v;
@@ -91,6 +92,8 @@ export function loadSetup(d: DisciplineId): ReportSetup {
       screenItems: Array.isArray(p.screenItems) ? p.screenItems.filter((x): x is string => typeof x === "string") : base.screenItems,
       goalAreas: Array.isArray(p.goalAreas) ? p.goalAreas : base.goalAreas,
       objectives: typeof p.objectives === "number" && p.objectives > 0 && p.objectives < 10 ? p.objectives : base.objectives,
+      teacherAreas: p.teacherAreas && typeof p.teacherAreas === "object" ? { ...base.teacherAreas, ...p.teacherAreas } : teacherConcerns === false ? { fine: false, gross: false, sensory: false } : base.teacherAreas,
+      serviceType: p.serviceType === "indirect" ? "indirect" : "direct",
       ratings,
     };
   } catch {

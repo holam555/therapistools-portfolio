@@ -16,7 +16,9 @@ import { applyBlockOverrides, applyScreenOverrides, gridFor, type TemplateOverri
 // ---------- assessments (shared by both report types; only the screen depends on grade) ----------
 
 function teacherSection(setup: ReportSetup): ReportSection {
-  if (!setup.teacherConcerns) {
+  const a = setup.teacherAreas;
+  const any = a.fine || a.gross || a.sensory;
+  if (!any) {
     return {
       id: "teacher",
       title: "Teacher Rating Checklist",
@@ -32,20 +34,45 @@ function teacherSection(setup: ReportSetup): ReportSection {
       notesHint: "Anything the teacher noted, if you want to adjust the wording.",
     };
   }
+  // One paragraph per area, so each keeps its own blanks whichever areas are ticked.
+  const blocks: Block[] = [];
+  const opener = "Based on the Teacher Rating Form completed by the [[who completed it::completedBy]], {{student}} demonstrates ";
+  if (a.fine)
+    blocks.push({
+      kind: "para", id: "teacher-concerns",
+      text: `${opener}[[fine motor delays and how often::delayFrequency]], which [[impact on access to the curriculum and independence]]. Specific areas of concern include [[areas of concern::concernAreas]].`,
+    });
+  else
+    blocks.push({
+      kind: "para", id: "teacher-fine-none",
+      text: `${opener}age and grade level fine motor skills 80-100% as compared to peers for handwriting, manipulating school tools, and managing belongings.`,
+    });
+  if (a.gross)
+    blocks.push({
+      kind: "para", id: "teacher-gross",
+      text: "Gross motor concerns were also reported: {{they}} [[gross motor difficulties and how often]], which [[impact on moving around the school and physical education]].",
+    });
+  else blocks.push({ kind: "para", id: "teacher-gross-none", text: "Gross motor skills are 80-100% as compared to peers for navigating the school setting." });
+  if (a.sensory)
+    blocks.push({
+      kind: "para", id: "teacher-sensory",
+      text: "The teacher identified sensory processing concerns, noting that {{they}} [[sensory behaviors noted by the teacher]], which [[impact on instruction or work production]].",
+    });
+  else blocks.push({ kind: "para", id: "teacher-sensory-none", text: "The sensory area is listed as no concerns that interfere with instruction or work production." });
+  blocks.push({
+    kind: "para", id: "teacher-accommodations",
+    text: "To support {{their}} needs in the classroom, accommodations such as [[accommodations in use::accommodations]] are used.",
+  });
   return {
     id: "teacher",
     title: "Teacher Rating Checklist",
-    blocks: [
-      {
-        kind: "para", id: "teacher-concerns",
-        text: "Based on the Teacher Rating Form completed by the [[who completed it::completedBy]], {{student}} demonstrates [[fine motor delays and how often::delayFrequency]], which [[impact on access to the curriculum and independence]]. Specific areas of concern include [[areas of concern::concernAreas]]. [[Gross motor concerns, or none reported]]. [[Sensory concerns noted by the teacher]]. To support {{their}} needs in the classroom, accommodations such as [[accommodations in use::accommodations]] are used.",
-      },
-    ],
+    blocks,
     examples: [
       "Based on the Teacher Rating Form completed by the special education teacher, [STUDENT] demonstrates fine motor skill delays some of the time (51–79%), which interfere with her ability to keep up with written work and manage her materials. Specific areas of concern include letter sizing, line adherence, coloring, cutting, buttoning, and opening containers. No gross motor concerns were reported, though the teacher noted that she chews on her sleeves and covers her ears during assemblies. To support these needs in the classroom, accommodations such as a chewable pencil topper, a seat near the door, and a visual schedule are used.",
       "Based on the Teacher Rating Form completed by the general education teacher, [STUDENT] demonstrates fine motor delays the majority of the time (80–100%), which interfere with his independence and access to the general education curriculum. Identified areas of concern include pencil grasp, letter formation, copying from the board, coloring, cutting, and zipping his coat. His sensory behaviors are also of concern, specifically rocking in his chair and touching classmates' belongings, which interfere with his functioning in the classroom setting. To support his overall performance and attention, effective classroom accommodations currently in use include a wobble cushion, a fidget kept in his desk, and a checklist for packing up.",
+      "Based on the Teacher Rating Form completed by the physical education teacher, [STUDENT] demonstrates age and grade level fine motor skills for handwriting and managing belongings. Gross motor concerns were also reported: he loses his balance on the stairs and avoids running games some of the time (51–79%), which limits his participation in physical education and recess. To support his needs, accommodations such as a handrail reminder and a peer partner for playground games are used.",
     ],
-    notesHint: "What the teacher checked on the rating form: areas of concern, gross motor, sensory, and accommodations in use.",
+    notesHint: "What the teacher checked on the rating form for each area ticked, and the accommodations in use.",
   };
 }
 
@@ -216,7 +243,15 @@ function annualSections(setup: ReportSetup, o?: TemplateOverrides): ReportSectio
     examples: [],
   });
   out.push(...assessmentSections(setup, o));
-  if (setup.concerns) {
+  out.push(...(setup.concerns ? concernSections(setup) : [ENDING]));
+  return out;
+}
+
+/** Next steps, impact, service delivery and the goal: for any report where the student has concerns or qualifies. */
+function concernSections(setup: ReportSetup): ReportSection[] {
+  const out: ReportSection[] = [];
+  {
+    // Kept in one block so the four sections read as a unit.
     out.push({
       id: "next-steps",
       title: "Next Steps",
@@ -255,15 +290,21 @@ function annualSections(setup: ReportSetup, o?: TemplateOverrides): ReportSectio
       id: "service",
       title: "Service Delivery Statement",
       blocks: [
-        {
-          kind: "para", id: "service",
-          text: "Occupational Therapy services will be provided by a licensed Registered Occupational Therapist or by a Certified Occupational Therapy Assistant under the supervision of a Registered Occupational Therapist. [[minutes and frequency::minutes]] of occupational therapy will be provided [[inside or outside the classroom::location]] to address [[skill areas::skillAreas]]. Services may be 1:1 or within a small group.",
-        },
+        setup.serviceType === "indirect"
+          ? {
+              kind: "para", id: "service-indirect",
+              text: "{{student}} will receive [[minutes and frequency::minutes]] of indirect Occupational Therapy services to support [[skill areas::skillAreas]]. These services will consist of collaborating with {{their}} special education team and general education teachers, or working in a 1:1 setting with an occupational therapist to assess or learn new skills as needed.",
+            }
+          : {
+              kind: "para", id: "service",
+              text: "Occupational Therapy services will be provided by a licensed Registered Occupational Therapist or by a Certified Occupational Therapy Assistant under the supervision of a Registered Occupational Therapist. [[minutes and frequency::minutes]] of occupational therapy will be provided [[inside or outside the classroom::location]] to address [[skill areas::skillAreas]]. Services may be 1:1 or within a small group.",
+            },
       ],
       examples: [
         "60 minutes monthly of occupational therapy will be provided inside the classroom to address handwriting, cutting and self help skills. Services may be 1:1 or within a small group.",
+        "[STUDENT] will receive 30 minutes quarterly of indirect Occupational Therapy services to support her handwriting accommodations and keyboarding. These services will consist of collaborating with her special education team and general education teachers, or working in a 1:1 setting with an occupational therapist to assess or learn new skills as needed.",
       ],
-      notesHint: "Minutes and frequency, where services happen, and the skill areas.",
+      notesHint: "Minutes and frequency, direct or indirect, where services happen, and the skill areas.",
     });
     const goal: Block[] = [
       {
@@ -287,26 +328,29 @@ function annualSections(setup: ReportSetup, o?: TemplateOverrides): ReportSectio
       ],
       notesHint: "The goal date, criteria, and what each objective should target.",
     });
-  } else {
-    out.push({
-      id: "ending",
-      title: "Ending",
-      blocks: [
-        {
-          kind: "para", id: "ending",
-          text: "Record review and analysis of the teacher rating checklist form indicates that {{student}} demonstrates age/grade level motor skills which supports access to the curriculum. {{Their}} fine and gross motor skills do not significantly limit {{their}} academic success. At this time, there are no motor concerns that significantly impact {{their}} ability to access the general education curriculum.",
-        },
-        { kind: "para", id: "closing", text: CLOSING },
-      ],
-      examples: [],
-    });
   }
   return out;
 }
 
+const ENDING: ReportSection = {
+  id: "ending",
+  title: "Ending",
+  blocks: [
+    {
+      kind: "para", id: "ending",
+      text: "Record review and analysis of the teacher rating checklist form indicates that {{student}} demonstrates age/grade level motor skills which supports access to the curriculum. {{Their}} fine and gross motor skills do not significantly limit {{their}} academic success. At this time, there are no motor concerns that significantly impact {{their}} ability to access the general education curriculum.",
+    },
+    { kind: "para", id: "closing", text: CLOSING },
+  ],
+  examples: [],
+};
+
 /** The sections of a report, in order, for this setup, with the writer's own template edits laid over. */
 export function otReportSections(setup: ReportSetup, o?: TemplateOverrides): ReportSection[] {
-  const built = setup.reportType === "annual" ? annualSections(setup, o) : [...assessmentSections(setup, o), summarySection(setup, o)];
+  const built =
+    setup.reportType === "annual"
+      ? annualSections(setup, o)
+      : [...assessmentSections(setup, o), summarySection(setup, o), ...(setup.concerns ? concernSections(setup) : [])];
   return applyBlockOverrides(built, o);
 }
 
