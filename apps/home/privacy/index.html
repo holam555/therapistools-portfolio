@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy · Therapistools</title>
-  <meta name="description" content="How Therapistools handles data: no accounts, no student or child names stored, and your work stays in your own browser." />
+  <meta name="description" content="How Therapistools handles data: no sign-up needed, no student or child names stored, your work stays in your own browser, and the IEP Writer's optional account stores only your template." />
   <link rel="canonical" href="https://www.therapistools.com/privacy/" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2326968a'/%3E%3Cg fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round' transform='translate(4 4)'%3E%3Crect x='3' y='3' width='7' height='7'/%3E%3Crect x='14' y='3' width='7' height='7'/%3E%3Crect x='3' y='14' width='7' height='7'/%3E%3Ccircle cx='17.5' cy='17.5' r='3.5'/%3E%3C/g%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/shared/brand.css" />
@@ -42,16 +42,16 @@
   <tt-suite-bar current="privacy"></tt-suite-bar>
   <main class="wrap">
     <h1>Privacy</h1>
-    <p class="updated">Covers every Therapistools tool. Last updated 26 October 2026.</p>
+    <p class="updated">Covers every Therapistools tool. Last updated 2 November 2026.</p>
 
     <div class="tt-card short">
       <h2>The short version</h2>
       <ul>
-        <li>There are no accounts, no sign-ups and no server that stores your work.</li>
-        <li>Everything you make is saved in your own browser, on your own device.</li>
+        <li>No sign-up is needed for any tool. Everything you make is saved in your own browser, on your own device.</li>
+        <li>The IEP Writer has an optional account. It stores one thing: your report template, so it follows you to another computer. Never the report you are writing.</li>
         <li>No tool saves a child's or student's name. Students are placeholders or ID numbers.</li>
-        <li>Nothing you type is sent to us or to anyone else.</li>
-        <li>No page counts visits or uses analytics of any kind.</li>
+        <li>Nothing you type is sent to us or to anyone else, except that template if you sign in.</li>
+        <li>No page counts visits or uses analytics of any kind. We only know how many accounts exist.</li>
       </ul>
     </div>
 
@@ -68,13 +68,13 @@
 
     <section id="stored">
       <h2>What each tool saves, and where</h2>
-      <p>All of this lives in your browser's local storage on the device you are using. It is never uploaded. A different browser or device will not see it, which is why each tool lets you export a backup file.</p>
+      <p>All of this lives in your browser's local storage on the device you are using. It is never uploaded. A different browser or device will not see it, which is why each tool lets you export a backup file. The one exception is the IEP Writer's report template when you choose to sign in, described <a href="#accounts">below</a>.</p>
       <table>
         <thead><tr><th>Tool</th><th>Saved on your device</th><th>Never saved</th></tr></thead>
         <tbody>
           <tr id="worksheets"><td><strong>Worksheets</strong></td><td>Your settings for each worksheet, print history, and child profiles with a nickname, age band and favorite themes.</td><td>Any child's name.</td></tr>
           <tr id="scheduler"><td><strong>Scheduler</strong></td><td>Schools, providers, students as ID numbers, grade schedules, booked sessions and planning rules. Spreadsheets you upload are read in the browser and only the result is saved.</td><td>Student names.</td></tr>
-          <tr id="iep"><td><strong>IEP Writer</strong></td><td>Your sentence library, saved recipes, and the draft you are working on.</td><td>Student names or any identifying details.</td></tr>
+          <tr id="iep"><td><strong>IEP Writer</strong></td><td>Your sentence library, saved recipes, your report template, the blanks you filled and the draft you are working on. If you sign in, the report template is also saved in your account.</td><td>Student names or any identifying details.</td></tr>
         </tbody>
       </table>
     </section>
@@ -84,20 +84,29 @@
       <table>
         <thead><tr><th>What</th><th>Home and Privacy</th><th>Worksheets</th><th>Scheduler</th><th>IEP Writer</th></tr></thead>
         <tbody>
-          <tr><td>Anything you type</td><td class="no">Never</td><td class="no">Never</td><td class="no">Never</td><td class="no">Never</td></tr>
+          <tr><td>Anything you type</td><td class="no">Never</td><td class="no">Never</td><td class="no">Never</td><td class="no">Never, except your report template if you sign in</td></tr>
           <tr><td>Visit counts or analytics</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
           <tr><td>Fonts from another company</td><td class="no">No</td><td class="yes">Yes, Google Fonts</td><td class="no">No</td><td class="no">No</td></tr>
         </tbody>
       </table>
 
       <h3 id="analytics">No visit counts</h3>
-      <p>No page on this site counts visits, uses analytics or sets cookies. The IEP Writer goes further: once loaded, it blocks every network connection, so it cannot send anything even by mistake.</p>
+      <p>No page on this site counts visits, uses analytics or sets cookies. The IEP Writer goes further: its page can connect to one place only, the account server described next, and only after you sign in. The downloadable offline file blocks every network connection, so it cannot send anything even by mistake. The only number we have is how many IEP Writer accounts exist.</p>
+
+      <h3 id="accounts">The IEP Writer account</h3>
+      <p>Signing in is optional. Without it the IEP Writer works exactly as described above and sends nothing. If you sign in, with Google or with a code emailed to you, one thing is stored in your account:</p>
+      <ul>
+        <li><strong>Stored:</strong> your report template: the wording, labels, sample sentences, dropdown choices and rating grids you set up, so the same template opens on another browser or computer.</li>
+        <li><strong>Never stored:</strong> the report you are writing, the blanks you filled, ratings, recipes, your sentence library, or anything about a student. Those stay in your browser.</li>
+      </ul>
+      <p>Before each save, the same privacy check that runs on the Output tab reads the template. If it finds a full date, a phone number, an email address or a word on your never-allow list, the template is not saved to your account until you remove it.</p>
+      <p>The account server is run by Supabase, a hosting company, in a project we control. It holds your email address, when you last signed in, and your template. Data is encrypted on the way there and at rest. Only you can read your rows: the database enforces it, not just the page. If you sign in with Google, Google learns that you signed in to this site; we receive your email address from Google and nothing else. Sign-in emails are sent through Supabase's email service. Deleting your account removes your template; ask through the feedback form and we do it within a week.</p>
 
       <h3>Fonts</h3>
       <p>The Worksheets pages load some fonts from Google Fonts, so Google receives a standard request, including your IP address, when those pages open. Every other page uses fonts served from this site. We plan to move Worksheets onto our own fonts too.</p>
 
       <h3>The web host</h3>
-      <p>The site runs on our own server. Requests reach it through Cloudflare, which protects the server and delivers the pages quickly. Like every web service, the server and Cloudflare receive standard request details, such as your IP address and which page was requested, in order to send you the page. We do not use those details to track anyone. Neither ever receives your work, because your work is never sent anywhere.</p>
+      <p>The site runs on our own server. Requests reach it through Cloudflare, which protects the server and delivers the pages quickly. Like every web service, the server and Cloudflare receive standard request details, such as your IP address and which page was requested, in order to send you the page. We do not use those details to track anyone. Neither ever receives your work, because your work is never sent to them; the IEP Writer account server is the only place anything of yours goes, and only your template.</p>
 
       <h3>Forms you choose to open</h3>
       <p>The Scheduler has "Give feedback" and "Get updates" buttons. They open forms hosted by Tally in a new tab. Nothing is sent unless you fill one in and submit it, and only what you type into the form.</p>
@@ -108,7 +117,8 @@
       <ul>
         <li><strong>Back up:</strong> each tool can export your work to a file, which you keep.</li>
         <li><strong>Delete:</strong> clearing this site's data in your browser settings removes everything Therapistools saved on that device. You can also remove child profiles one by one in Worksheets.</li>
-        <li><strong>Offline:</strong> the IEP Writer can be downloaded as a single file and used with no internet connection.</li>
+        <li><strong>Offline:</strong> the IEP Writer can be downloaded as a single file and used with no internet connection. That file has no sign-in and can make no connection at all.</li>
+        <li><strong>Sign out:</strong> in the IEP Writer, signing out keeps your template in the browser and in your account. To delete the account, ask through the feedback form.</li>
       </ul>
       <p>There are no ads, nothing is sold, and nothing is shared with anyone.</p>
     </section>

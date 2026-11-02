@@ -24,6 +24,7 @@ runbooks and every lesson from building it are in
 | CI | GitHub's cloud runners (`ubuntu-latest`). No homelab runner is involved |
 | Backups | the cluster-wide nightly vzdump covers every guest. The site has no state: any release can be rebuilt from git |
 | Analytics | none, by decision (privacy page). Cloudflare Web Analytics must stay off, see below |
+| IEP Writer accounts | a hosted Supabase project, not on this box (docs/ACCOUNTS.md). The site stays stateless; user count is in the Supabase dashboard |
 
 ## Request flow
 
@@ -62,8 +63,9 @@ all enforced by the forced command `therapistools-deploy-gate`:
 | `publish <run id>-<attempt> <file count>` | runs `therapistools-publish` on that release |
 | `live` | prints the release the site serves |
 
-`therapistools-publish` checks the release (entry points present, IEP Writer
-CSP intact, every built file arrived), swaps the symlink with one rename and
+`therapistools-publish` checks the release (entry points present, the IEP
+Writer page's CSP allows one `*.supabase.co` origin or nothing and the
+offline file's allows nothing, every built file arrived), swaps the symlink with one rename and
 prunes to three releases. A failure before the swap leaves the live site on
 the previous release. `scripts/test-publish.sh` (part of `npm test`)
 exercises it in a scratch tree. The worst a leaked key can do is publish a

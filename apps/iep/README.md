@@ -1,8 +1,11 @@
 # IEP Writer (Therapistools)
 
-A private, offline tool for writing IEP sections from your own sentence
-templates. Everything runs inside your web browser on this computer. There is
-no account, no server, and the app never connects to the internet.
+A private tool for writing IEP sections from your own sentence templates.
+Everything runs inside your web browser on this computer. Signing in is
+optional: an account stores your report template and nothing else, so it
+follows you to another computer (docs/ACCOUNTS.md at the repository root).
+Without signing in the app never connects to the internet, and the
+downloadable offline file cannot connect at all.
 
 Students are always written as `[STUDENT]`. The app has no fields for a name,
 birth date, school, or ID number, on purpose.
@@ -88,7 +91,8 @@ npm install
 npm run build
 ```
 
-This refreshes `dist/easyiep.html`. To work on the app with live reload instead:
+This refreshes `dist/easyiep.html` (the website page) and
+`dist/easyiep-offline.html` (the downloadable file with no sign-in). To work on the app with live reload instead:
 
 ```bash
 npm start
@@ -105,13 +109,17 @@ above for you and opens the app.
 npm test
 ```
 
-runs the automated tests, including one that fails if any code tries to reach
-the network.
+runs the automated tests, including one that fails if any code outside the
+account module (`src/account/`) tries to reach the network, or if the offline
+build bundles any network code.
 
 ## Where things live
 
 - `src/model/` — the data model and all the text logic (templates, splitter,
   storage). No UI code.
+- `src/account/` — the only network code: sign-in and keeping the report
+  template in the writer's account. `supabase/migrations/` is the database
+  table and its row-level security.
 - `src/ui/` — the screens.
 - `test/` — automated tests and the fictional sample report used to tune the
   import helper.

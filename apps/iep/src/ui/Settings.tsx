@@ -13,6 +13,7 @@ import { BLANKS_MARKER, DEFAULT_PROMPT_TEMPLATE, ROLE_MARKER, TEMPLATE_MARKER, p
 import { isValidVariableName, variableNames } from "../model/template";
 import { AddInline, InlineEdit, confirmAction, downloadText, todayStamp } from "./common";
 import { useApp } from "./state";
+import { AccountCard } from "./Account";
 import { PRIVACY_PATH, SITE_ORIGIN } from "../../../../shared/brand.js";
 
 /** From the downloaded offline file, the privacy page lives on the website. */
@@ -57,11 +58,13 @@ export function Settings() {
       <section className="card">
         <h2>Privacy</h2>
         <p className="hint">
-          Your library and drafts are saved only in this browser. This tool has no field for a student's name, never connects to the
-          internet after it loads, and has no visit counter. Students are always written as [STUDENT].{" "}
-          <a href={privacyHref}>Read the full privacy page</a>.
+          Your library and drafts are saved only in this browser. This tool has no field for a student's name and has no visit counter.
+          It connects to the internet only if you sign in, and then only to save your report template to your account. Students are always
+          written as [STUDENT]. <a href={privacyHref}>Read the full privacy page</a>.
         </p>
       </section>
+
+      <AccountCard />
 
       <section className="card">
         <h2>Discipline</h2>

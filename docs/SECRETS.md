@@ -6,6 +6,11 @@ One secret, one place. Values never go in the repository.
 |---|---|---|---|
 | `DEPLOY_SSH_KEY` | GitHub repository secret (Settings > Secrets and variables > Actions) | `.github/workflows/deploy.yml`, to reach the host through the tunnel | The deploy fails at "Set up SSH through the tunnel" and the live site stays on the previous release. Visible |
 
+The IEP Writer's account server (docs/ACCOUNTS.md) adds no secret here:
+`apps/iep/.env` holds the Supabase project URL and **publishable** key, both
+public by design. The Supabase secret key and the Google OAuth client secret
+live only in the Supabase dashboard and are never copied anywhere.
+
 `DEPLOY_SSH_KEY` is the private half of an ed25519 key. Its public half is
 `PUBKEY` in `infra/therapistools-site.sh` and the only line in
 `/home/deploy/.ssh/authorized_keys` on the host, restricted to the deploy

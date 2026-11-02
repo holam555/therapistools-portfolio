@@ -35,7 +35,8 @@
 	}
 
 	# The Scheduler is locked to its own origin. The IEP Writer carries its
-	# own stricter CSP (connect-src 'none') inside its single HTML file.
+	# own CSP inside its single HTML file: connect-src is its account server
+	# alone (docs/ACCOUNTS.md), and 'none' in the downloadable offline file.
 	header /scheduler/* {
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
 		X-Frame-Options "DENY"

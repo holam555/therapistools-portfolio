@@ -4,8 +4,9 @@
 occupational therapist to fix her own workday.**
 Live at [www.therapistools.com](https://www.therapistools.com).
 
-No accounts, no backend, no analytics. Everything runs in the browser and
-stays there. No student's name is ever stored.
+No sign-up needed, no analytics. Everything runs in the browser and stays
+there. The IEP Writer has an optional account that stores one thing, the
+writer's report template (docs/ACCOUNTS.md). No student's name is ever stored.
 
 ## The problem
 
@@ -34,8 +35,8 @@ prompt carries the section's frame, two or three sample sentences so the tone
 matches, a short set of rules (fill blanks only from my notes, never invent
 scores or dates, never add a name) and a place to paste rough notes. The
 writer pastes it into whatever AI tool their district has approved. The tool
-itself never calls an AI, never connects to the internet, and never sees a
-student's name, so there is no privacy question to answer before using it.
+itself never calls an AI and never sees a student's name. Without signing in
+it never connects to the internet; signing in stores only the template.
 
 The design choices that matter:
 
@@ -111,8 +112,10 @@ To work on one tool with live reload, run `npm run dev` inside its folder.
 
 The full policy is the site's privacy page, `apps/home/privacy/index.html`.
 
-- No accounts and no server-side storage.
+- No sign-up is needed for anything. The IEP Writer's optional account stores
+  the writer's report template and nothing else (docs/ACCOUNTS.md).
 - No child or student names are stored. Students are placeholders or ID numbers.
-- The IEP Writer makes no network requests at all.
+- The IEP Writer connects to its account server only, and only after sign-in;
+  the downloadable offline file makes no network requests at all.
 - No page has analytics.
 - Every sample sentence and test fixture in this repository is fictional.

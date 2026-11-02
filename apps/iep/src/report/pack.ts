@@ -1,4 +1,5 @@
 import type { DisciplineId } from "../model/disciplines";
+import { announceTemplateChange } from "../account/events";
 import { SPM_GRID } from "./spm";
 import { cloneGrid, groupSentences, levelLine, normalizeGrid, type GridDef, type GridRatings } from "./grids";
 import { OPTION_LISTS, type OptionList } from "./options";
@@ -299,6 +300,7 @@ export function savePack(d: DisciplineId, pack: TemplatePack | null): void {
   } catch {
     /* storage unavailable */
   }
+  announceTemplateChange({ discipline: d, kind: "pack" });
 }
 
 // ---------- editing ----------

@@ -4,7 +4,7 @@ You are picking up Therapistools from an earlier Claude session in a
 different account. That session's memory does not carry over, so everything
 you need that isn't in the code is in this file. Read it, then
 [CLAUDE.md](../CLAUDE.md) (rules) and [README.md](../README.md) (commands).
-State as of 2026-10-26.
+State as of 2026-11-02.
 
 ## What this is
 
@@ -21,8 +21,10 @@ therapists. It is one static site with three tools, in this order everywhere
    for children.
 
 Plus a home page and one site-wide privacy page (`apps/home`), and shared
-brand files (`shared/`). No accounts, no backend; data lives in the user's
-browser.
+brand files (`shared/`). No backend of our own; data lives in the user's
+browser. The IEP Writer has an optional account (a hosted Supabase project,
+added 2026-11-02) that stores one thing: the writer's report template, so it
+follows them to another computer. Everything about it: [ACCOUNTS.md](ACCOUNTS.md).
 
 The owner is a school-based occupational therapist who uses the IEP Writer for
 real work, one or two reports a day. They also want the site as a portfolio
@@ -57,9 +59,20 @@ to Vercel, so there are no old addresses to redirect.
   the design reference: warm paper, teal and orange, Fredoka headings, DM Sans
   body, pill buttons. All in `shared/brand.css`.
 - **Privacy:** no tool stores a child's or student's name. The IEP Writer
-  stays fully offline (no AI API calls). No page has analytics (decided
-  2026-10-26 with the move off Vercel). The single
-  privacy policy is `apps/home/privacy/index.html`; update it with any change.
+  makes no AI API calls. Its only network use is the optional account
+  (2026-11-02): sign in with Google or an emailed code, and only the report
+  template is stored; drafts, filled values, ratings, recipes and the library
+  never leave the browser, and a privacy gate holds a template back if it
+  holds a date, phone number or email. The downloadable offline file still
+  makes no connections at all. No page has analytics (decided 2026-10-26 with
+  the move off Vercel); the owner counts users by accounts in the Supabase
+  dashboard. The single privacy policy is `apps/home/privacy/index.html`;
+  update it with any change.
+- **Why accounts (owner, 2026-11-02):** the owner's own template holds their
+  district wording and should live in their account, not in the code that
+  every visitor gets; the public built-in template stays fictional. The owner
+  chose a hosted service (they have used Supabase before) over running an
+  account server on the homelab box.
 - **AI use in the IEP Writer:** the tool never calls an AI. It builds one
   prompt per report section; the owner pastes it into Gemini and adds their
   notes there. The AI may fill blanks and match tone, never invent scores or
@@ -86,8 +99,8 @@ to Vercel, so there are no old addresses to redirect.
     and section titles. The owner asked for this because a template read
     from a document by AI may be wrong, so everything must be correctable.
   - The built-in OT template is in the code, so every visitor gets it; edits
-    and own templates stay in that person's browser and backup file only.
-    The owner knows and is fine with this.
+    and own templates stay in that person's browser and backup file, and in
+    their account if they sign in (ACCOUNTS.md).
 - **Disciplines:** the IEP Writer asks for one, and the picker says only OT
   has a pre-made template. OT uses the built-in template. Every other
   discipline builds its own template pack on the Report tab: from their own
@@ -104,6 +117,15 @@ to Vercel, so there are no old addresses to redirect.
 
 ## Next steps, in the owner's likely order
 
+0. **Switch accounts on** (code is done, 2026-11-02; needs the owner's
+   hands): create the Supabase project, run the migration, set up Google
+   sign-in and the email code template, put the URL and publishable key in
+   `apps/iep/.env`, and update `infra/publish.sh` on the box. Steps in
+   [ACCOUNTS.md](ACCOUNTS.md). Until `.env` is filled the sign-in button is
+   hidden and the page makes no requests. Open question for the owner: the
+   built-in template's fixed paragraphs still follow their district's wording
+   (samples are fictional); decide whether to rewrite them generically now
+   that their real template can live in their account.
 1. **Report templates for other disciplines** (plan agreed with the owner on
    2026-10-26). A new user chooses one of three starts: blank, a pre-made
    template (OT), or their own document. Steps, each shipped on its own:

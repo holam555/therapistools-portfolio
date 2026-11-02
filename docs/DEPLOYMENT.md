@@ -264,8 +264,10 @@ Smaller facts worth knowing:
 - **`no-transform` on every response.** Removing it brings the Cloudflare
   beacon back and breaks the privacy promise. Tested.
 - **Caddyfile routes == `scripts/site-routes.mjs`.** Tested.
-- **The IEP Writer keeps `connect-src 'none'`.** `publish.sh` refuses a
-  release without it.
+- **The IEP Writer's CSP stays shut.** The page's `connect-src` is one
+  `*.supabase.co` origin (its account server, docs/ACCOUNTS.md) or `'none'`;
+  the downloadable offline file keeps `'none'`. `publish.sh` refuses a
+  release that loosens either.
 - **The deploy key does only what the gate allows**, only through the
   tunnel, and the scripts it runs are root-owned. Never give `deploy` a shell
   command, sudo, or write access outside `/var/www`.

@@ -36,7 +36,11 @@ for f in index.html privacy/index.html robots.txt llms.txt shared/brand.css shar
 done
 compgen -G "$RELEASE_DIR/worksheets/assets/*.js" >/dev/null || fail "no worksheets assets"
 compgen -G "$RELEASE_DIR/scheduler/assets/*.js" >/dev/null || fail "no scheduler assets"
-grep -q "connect-src 'none'" "$RELEASE_DIR/iep/index.html" || fail "IEP Writer lost its no-network CSP"
+# The IEP Writer page may talk to one Supabase project (its account server)
+# or to nothing; the downloadable offline file talks to nothing. Any other
+# connect-src means the CSP was loosened and the release is refused.
+grep -Eq "connect-src ('none'|https://[a-z0-9-]+\.supabase\.co);" "$RELEASE_DIR/iep/index.html" || fail "IEP Writer CSP must allow only its account server or nothing"
+grep -q "connect-src 'none'" "$RELEASE_DIR/iep/therapistools-iep-writer.html" || fail "offline IEP Writer lost its no-network CSP"
 
 # Every file the build produced arrived (rsync can stop short on a full disk).
 actual=$(find "$RELEASE_DIR" -type f | wc -l)

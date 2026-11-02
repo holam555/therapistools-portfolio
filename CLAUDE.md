@@ -14,8 +14,13 @@ also has its own docs; read them before changing that app.
    `src/lib/persistence.ts` strips it from settings, history and share links,
    profiles use nicknames, and tests in `src/test/persistence.test.ts` prove it.
    The site privacy page (`apps/home/privacy/`) is the single privacy policy.
-2. **IEP Writer makes no network requests and has no analytics.** Its tests
-   enforce this; the built file carries a CSP with `connect-src 'none'`.
+2. **IEP Writer talks to one place at most, and has no analytics.** The only
+   network code is `apps/iep/src/account/` (optional sign-in; stores the
+   writer's report template and nothing else, docs/ACCOUNTS.md). The website
+   page's CSP allows exactly the Supabase origin named in `apps/iep/.env`;
+   the downloadable offline file keeps `connect-src 'none'` and bundles no
+   account code. Tests and `infra/publish.sh` enforce both. Drafts, filled
+   values, ratings, recipes and the sentence library never leave the browser.
    **Analytics policy:** no page has analytics (owner decision 2026-10-26, at
    the move off Vercel). Cloudflare must not inject its beacon either: every
    response carries `Cache-Control: no-transform` (docs/INFRA.md), and
@@ -99,6 +104,8 @@ the changed tool works in `npm run preview`. Pushing to `main` publishes it.
   Moving them to `shared/fonts` needs print QA of every template first.
 - IEP Writer: let other disciplines build a report template from scratch or
   from a copy of OT's; then retire Library, Import, Builder and Output.
+- IEP Writer accounts are built but switched off until the owner fills
+  `apps/iep/.env` and updates `infra/publish.sh` on the box (docs/ACCOUNTS.md).
 - Cloudflare Web Analytics is still switched on in the Cloudflare dashboard
   (the server blocks it with `no-transform`); the Cloudflare account owner
   turns it off (docs/INFRA.md).

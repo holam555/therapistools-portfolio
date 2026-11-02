@@ -5,6 +5,7 @@ import { OPTION_LISTS, type OptionList } from "./options";
 import { normalizeGrid, sameGrid, type GridDef } from "./grids";
 import { SPM_GRID } from "./spm";
 import type { GradeGroup, ReportSection, ScreenItem } from "./types";
+import { announceTemplateChange } from "../account/events";
 
 /**
  * A writer's own changes to the built-in template, kept in their browser and
@@ -120,6 +121,7 @@ export function saveOverrides(d: DisciplineId, o: TemplateOverrides): void {
   } catch {
     /* storage unavailable */
   }
+  announceTemplateChange({ discipline: d, kind: "overrides" });
 }
 
 /** Choices for a dropdown list, with the writer's own version if they edited it. */

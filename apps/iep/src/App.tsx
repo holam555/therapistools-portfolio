@@ -9,6 +9,8 @@ import { AppProvider, useApp } from "./ui/state";
 import { DisciplinePicker } from "./ui/DisciplinePicker";
 import { DISCIPLINES, getDiscipline, type DisciplineId } from "./model/disciplines";
 import { loadDiscipline, saveDiscipline } from "./model/storage";
+import { AccountProvider, useAccount } from "./account/AccountProvider";
+import { AccountButton, ConflictNotice } from "./ui/Account";
 
 type Tab = "report" | "library" | "import" | "builder" | "output" | "settings";
 
@@ -31,7 +33,9 @@ export function App() {
   // The key remounts the provider, so switching loads that discipline's own bank.
   return (
     <AppProvider key={discipline} discipline={discipline} changeDiscipline={choose}>
-      <Shell />
+      <AccountProvider>
+        <Shell />
+      </AccountProvider>
     </AppProvider>
   );
 }
@@ -39,6 +43,8 @@ export function App() {
 function Shell() {
   const [tab, setTab] = useState<Tab>("report");
   const { undo, canUndo, fresh, savedAt, discipline, changeDiscipline } = useApp();
+  // When the account's template replaces this browser's, the report editor reloads it.
+  const { templateEpoch } = useAccount();
   const current = getDiscipline(discipline);
   const [dismissed, setDismissed] = useState(false);
   return (
@@ -86,8 +92,10 @@ function Shell() {
           <span className="hint saved" aria-live="polite">
             {savedAt ? `Saved ${savedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}
           </span>
+          <AccountButton />
         </div>
       </header>
+      <ConflictNotice />
       {fresh && !dismissed && (
         <div className="notice notice-info">
           {current.hasStarter ? (
@@ -107,7 +115,7 @@ function Shell() {
         </div>
       )}
       <main className="main">
-        {tab === "report" && <ReportBuilder />}
+        {tab === "report" && <ReportBuilder key={templateEpoch} />}
         {tab === "library" && <LibraryEditor />}
         {tab === "import" && <ImportHelper onDone={() => setTab("library")} />}
         {tab === "builder" && <Builder />}

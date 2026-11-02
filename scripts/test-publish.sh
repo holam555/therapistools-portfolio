@@ -18,7 +18,8 @@ make_release() { # <id>
            worksheets/assets/a.js scheduler/assets/b.js; do
     echo "$1" > "$d/$f"
   done
-  echo "<meta http-equiv=\"Content-Security-Policy\" content=\"connect-src 'none'\">" > "$d/iep/index.html"
+  echo "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; connect-src https://abcdefgh.supabase.co; img-src 'self'\">" > "$d/iep/index.html"
+  echo "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; connect-src 'none'; img-src 'self'\">" > "$d/iep/therapistools-iep-writer.html"
 }
 count() { find "$RELEASES_DIR/$1" -type f | wc -l; }
 publish() { bash "$here/infra/publish.sh" "$@" >"$tmp/out" 2>&1; }
@@ -40,7 +41,17 @@ ok "broken release fails and live stays put"
 make_release r3
 echo "no csp" > "$RELEASES_DIR/r3/iep/index.html"
 if publish "$RELEASES_DIR/r3" "$(count r3)"; then die "an IEP Writer without its CSP must fail"; fi
-ok "IEP Writer without connect-src 'none' is refused"
+ok "IEP Writer without a CSP is refused"
+
+echo "<meta http-equiv=\"Content-Security-Policy\" content=\"connect-src https://evil.example.com;\">" > "$RELEASES_DIR/r3/iep/index.html"
+if publish "$RELEASES_DIR/r3" "$(count r3)"; then die "an IEP Writer that may connect anywhere but its account server must fail"; fi
+ok "IEP Writer with a loosened connect-src is refused"
+
+echo "<meta http-equiv=\"Content-Security-Policy\" content=\"connect-src https://x.supabase.co;\">" > "$RELEASES_DIR/r3/iep/therapistools-iep-writer.html"
+echo "<meta http-equiv=\"Content-Security-Policy\" content=\"connect-src 'none';\">" > "$RELEASES_DIR/r3/iep/index.html"
+if publish "$RELEASES_DIR/r3" "$(count r3)"; then die "an offline IEP Writer that may connect must fail"; fi
+[ "$(live)" = r1 ] || die "a refused release must not move live"
+ok "offline IEP Writer without connect-src 'none' is refused; a page with connect-src 'none' is still accepted by the first check"
 
 make_release r4
 if publish "$RELEASES_DIR/r4" $(( $(count r4) + 1 )); then die "a short copy must fail"; fi

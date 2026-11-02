@@ -5,8 +5,8 @@
  *   dist/shared/                             brand.css, fonts, Therapistools bar (shared/)
  *   dist/worksheets/                         apps/worksheets (prerendered SPA)
  *   dist/scheduler/                          apps/scheduler (hash-routed SPA)
- *   dist/iep/index.html                      apps/iep (single offline file)
- *   dist/iep/therapistools-iep-writer.html    same file, offered as a download
+ *   dist/iep/index.html                      apps/iep (single file; may talk to its account server)
+ *   dist/iep/therapistools-iep-writer.html    the offline build of the same app, offered as a download
  */
 import { execSync } from "node:child_process";
 import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
@@ -34,7 +34,7 @@ cpSync(app("scheduler", "dist"), join(out, "scheduler"), { recursive: true });
 build("iep");
 mkdirSync(join(out, "iep"), { recursive: true });
 copyFileSync(app("iep", "dist", "easyiep.html"), join(out, "iep", "index.html"));
-copyFileSync(app("iep", "dist", "easyiep.html"), join(out, "iep", "therapistools-iep-writer.html"));
+copyFileSync(app("iep", "dist", "easyiep-offline.html"), join(out, "iep", "therapistools-iep-writer.html"));
 
 cpSync(app("home"), out, { recursive: true });
 // Shared brand files (stylesheet, fonts, Therapistools bar) for the static home page.

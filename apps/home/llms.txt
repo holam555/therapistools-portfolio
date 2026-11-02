@@ -1,14 +1,14 @@
 # Therapistools
 
-> Free browser tools for K-12 educators: special education teachers, school psychologists, and school therapists (occupational, speech and physical therapy). No accounts, no sign-up, and data stays on the user's own device.
+> Free browser tools for K-12 educators: special education teachers, school psychologists, and school therapists (occupational, speech and physical therapy). No sign-up needed, and data stays on the user's own device; the IEP Writer has an optional account that stores only the writer's report template.
 
 ## Tools
 
 - Scheduler: https://www.therapistools.com/scheduler/ : finds every student's open time across class schedules and books therapy sessions without double-booking. Students are referenced by ID number only.
-- IEP Writer: https://www.therapistools.com/iep/ : drafts IEP sections (present levels, goals, objectives, accommodations) from the writer's own sentence bank, for OT (starter library included), speech, PT, school psychology and special education, with a privacy check and a prompt for handing blanks to an AI chatbot. Works fully offline; students are always written as [STUDENT].
+- IEP Writer: https://www.therapistools.com/iep/ : drafts IEP sections (present levels, goals, objectives, accommodations) from the writer's own sentence bank, for OT (starter library included), speech, PT, school psychology and special education, with a privacy check and a prompt for handing blanks to an AI chatbot. Works offline (a downloadable single file makes no connections); an optional account stores only the report template; students are always written as [STUDENT].
 - Worksheets: https://www.therapistools.com/worksheets/ : printable OT worksheets for children aged 2-12 (details below).
 
-- Privacy: https://www.therapistools.com/privacy/ : one page covering every tool; no accounts, no child or student names stored.
+- Privacy: https://www.therapistools.com/privacy/ : one page covering every tool; no sign-up needed, no child or student names stored, optional IEP Writer account stores only a template.
 
 ## Worksheets
 
