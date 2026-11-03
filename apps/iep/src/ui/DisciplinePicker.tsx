@@ -19,15 +19,13 @@ export function DisciplinePicker({ onChoose }: { onChoose: (d: DisciplineId) => 
           {DISCIPLINES.map((d) => (
             <button key={d.id} type="button" className="picker-card" onClick={() => onChoose(d.id)}>
               <span className="picker-name">{d.label}</span>
-              <span className={`picker-tag ${d.hasStarter ? "has-starter" : ""}`}>
-                {d.hasStarter ? "Pre-made template included" : "Start blank or from your own document"}
-              </span>
+              <span className="picker-tag has-starter">Pre-made template included</span>
             </button>
           ))}
         </div>
         <p className="hint picker-foot">
-          Only occupational therapy has a pre-made report template so far. Other disciplines start blank or build a template from their own Word
-          document. Nothing leaves this browser.
+          Every discipline comes with a generic sample template. You can also start blank or build a template from your own Word document.
+          Nothing you type into a report leaves this browser.
         </p>
       </main>
     </div>

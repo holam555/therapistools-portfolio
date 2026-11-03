@@ -6,9 +6,10 @@ import { OPTION_LISTS } from "./options";
 import { BUILT_IN_GRIDS } from "./overrides";
 import { defaultSetup } from "./setup";
 import { GRADE_GROUPS } from "./types";
+import { premadeStrings } from "./premade";
 
 /**
- * Capitalised words that belong to the built-in report template (test names,
+ * Capitalised words that belong to the built-in report templates (test names,
  * scale names, sentence starts in the examples, dropdown choices). They are
  * ordinary report wording, not names, so the privacy check should not flag
  * them when a writer edits the template or fills a blank.
@@ -27,6 +28,7 @@ export function templateWords(): Set<string> {
         }
   for (const items of Object.values(SCREEN_ITEMS)) for (const i of items) texts.push(i.label, i.opener, ...i.examples);
   for (const l of Object.values(OPTION_LISTS)) texts.push(...l.options);
+  texts.push(...premadeStrings());
   for (const g of Object.values(BUILT_IN_GRIDS)) {
     texts.push(g.title, g.blank, g.none ?? "", g.allClear ?? "");
     for (const l of g.levels) texts.push(l.label, l.sentence);

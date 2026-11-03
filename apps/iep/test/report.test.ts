@@ -97,30 +97,30 @@ describe("OT report template", () => {
     const goal = otReportSections({ ...defaultSetup(), reportType: "annual", objectives: 4, goalAreas: ["selfcare"] }).find((s) => s.id === "goal")!;
     expect(goal.blocks.filter((b) => b.kind === "numbered").length).toBe(4);
     const text = sectionText(goal, "she");
-    expect(text).toContain("Standards Based Life Skill Curriculum");
-    expect(text).not.toContain("WLP.1.1");
+    expect(text).toContain("[[the self-care or life-skills standard this goal supports]]");
+    expect(text).not.toContain("handwriting or written-expression");
   });
 
   it("writes the teacher checklist one area at a time", () => {
     const text = (areas: ReportSetup["teacherAreas"]) => sectionText(otReportSections({ ...defaultSetup(), teacherAreas: areas }).find((s) => s.id === "teacher")!, "she");
     const sensoryOnly = text({ fine: false, gross: false, sensory: true });
-    expect(sensoryOnly).toContain("[STUDENT] demonstrates age and grade level fine motor skills 80-100%");
-    expect(sensoryOnly).toContain("Gross motor skills are 80-100% as compared to peers");
-    expect(sensoryOnly).toContain("noting that she [[sensory behaviors noted by the teacher]]");
-    expect(sensoryOnly).toContain("accommodations such as [[accommodations in use]] are used.");
+    expect(sensoryOnly).toContain("[STUDENT] demonstrates fine motor skills within age and grade expectations");
+    expect(sensoryOnly).toContain("Gross motor skills are within expectations for moving around the school");
+    expect(sensoryOnly).toContain("noting that she [[sensory behaviors the teacher noted]]");
+    expect(sensoryOnly).toContain("accommodations such as [[accommodations in use]] are in place.");
     const grossOnly = text({ fine: false, gross: true, sensory: false });
     expect(grossOnly).toContain("Gross motor concerns were also reported: she [[gross motor difficulties and how often]]");
-    expect(grossOnly).toContain("The sensory area is listed as no concerns");
-    expect(grossOnly).not.toContain("[[fine motor delays and how often]]");
+    expect(grossOnly).toContain("No sensory concerns that interfere");
+    expect(grossOnly).not.toContain("[[fine motor difficulties and how often]]");
     const none = text({ fine: false, gross: false, sensory: false });
-    expect(none).toContain("Record review and analysis of the teacher rating checklist form");
+    expect(none).toContain("The teacher rating checklist indicates that");
     expect(none).not.toContain("accommodations");
   });
 
   it("writes a direct or an indirect service statement for any report with concerns", () => {
     const service = (p: Partial<ReportSetup>) => sectionText(otReportSections({ ...defaultSetup(), ...p }).find((s) => s.id === "service")!, "he");
     expect(service({ reportType: "evaluation" })).toContain("[[minutes and frequency]] of occupational therapy will be provided [[inside or outside the classroom]]");
-    expect(service({ reportType: "annual", serviceType: "indirect" })).toContain("[STUDENT] will receive [[minutes and frequency]] of indirect Occupational Therapy services to support [[skill areas]]. These services will consist of collaborating with his special education team");
+    expect(service({ reportType: "annual", serviceType: "indirect" })).toContain("[STUDENT] will receive [[minutes and frequency]] of indirect occupational therapy services to support [[skill areas]]. These services consist of consulting with his special education team");
     expect(otReportSections({ ...defaultSetup(), reportType: "evaluation", concerns: false }).some((s) => s.id === "service")).toBe(false);
   });
 
@@ -140,7 +140,7 @@ describe("Word draft", () => {
     const xml = await (await JSZip.loadAsync(buf)).file("word/document.xml")!.async("string");
     expect(xml).toContain("Occupational Therapy Annual Review");
     expect(xml).toContain("Impact of Disability Statement");
-    expect(xml).toContain("Occupational Therapy in the school environment is a related service.");
+    expect(xml).toContain("School-based occupational therapy is a related service.");
     expect(xml).toMatch(/<w:highlight w:val="yellow"\/>/);
     expect(xml).toContain("[STUDENT]");
     expect(xml).not.toMatch(/\{\{|\}\}/);
@@ -165,7 +165,7 @@ describe("section prompts", () => {
     expect(p).toContain("=== FRAME ===\nINFORMAL FINE MOTOR SCREEN");
     expect(p).toContain("- Pencil grasp – She uses a [[grasp type]] pencil grasp.");
     expect(p).toContain("=== EXAMPLES (for style and tone only; never copy their details) ===");
-    expect(p).toContain("Copy Alphabet & Numbers – He can copy numbers 1–10 legibly, reversing the 7.");
+    expect(p).toContain("Copy alphabet & numbers – He copied the numbers 1 to 10 legibly with the 6 and the 9 reversed.");
     expect(p).toContain("then she, her, hers");
     expect(p).toContain("Never invent scores");
     expect(p).toMatch(/=== MY ROUGH NOTES FOR THIS SECTION \(paste below this line; [^)]+\) ===\n\n\n=== END NOTES ===$/);
@@ -221,8 +221,8 @@ describe("fillable blanks", () => {
   it("offers sample sentences from the item's own examples, in the chosen pronoun", () => {
     const item = screenItemsFor("k1").find((i) => i.id === "k1-grasp")!;
     const she = sampleSentences(item.examples, "she");
-    expect(she[0]).toBe("She is right handed and uses a quadrupod grasp on pencils and crayons.");
-    expect(she).toContain("She pressed lightly, so her marks were faint and hard to read.");
+    expect(she[0]).toBe("She is left handed and holds crayons in a fisted grasp, moving to a tripod grasp when reminded.");
+    expect(she).toContain("She pressed hard enough to tear the paper twice and kept her other hand in her lap instead of holding the page.");
     expect(she.join(" ")).not.toMatch(/\[STUDENT\]|\bhe\b|\bhis\b/i);
     expect(fitToBlank("He had good use of his stabilizer hand.", true)).toBe("He had good use of his stabilizer hand");
     expect(fitToBlank("He had good use of his stabilizer hand.", false)).toBe("He had good use of his stabilizer hand.");
@@ -239,7 +239,7 @@ describe("SPM-2 scales", () => {
     expect(text).toContain("Moderate Difficulties: Planning and Ideas");
     expect(text).toContain("Severe Difficulties: Vision and Touch");
     const summary = sectionText(otReportSections(setup).find((s) => s.id === "summary")!, "he");
-    expect(summary).toContain("sensorimotor skills are affected with Severe Difficulties for Vision and Touch and Moderate Difficulties for Planning and Ideas.");
+    expect(summary).toContain("sensory processing skills are affected with Severe Difficulties for Vision and Touch and Moderate Difficulties for Planning and Ideas.");
     expect(spmSummaryPhrase(all("typical"))).toBe("within the typical range across all areas");
   });
 
@@ -279,7 +279,7 @@ describe("editable rating grids", () => {
     const setup = { ...defaultSetup(), ratings: { spm2: { [spmKey("Vision")]: "severe", [spmKey("Touch")]: "typical", [spmKey("Total")]: "moderate" } } };
     const sections = otReportSections(setup, o);
     const text = sectionText(sections.find((s) => s.id === "spm2")!, "he");
-    expect(text).toContain("Subtests include: Vision, Touch.");
+    expect(text).toContain("Scales include: Vision, Touch.");
     expect(text).toContain("Typical Processing, Moderate Difficulties, or Definite Dysfunction");
     expect(text).toContain("Definite Dysfunction: Vision");
     expect(text).toContain("Moderate Difficulties: Total");
@@ -343,7 +343,7 @@ describe("template edits", () => {
     const withConcerns = otReportSections({ ...defaultSetup(), teacherAreas: { fine: true, gross: false, sensory: false } }, o).find((s) => s.id === "teacher")!;
     const without = otReportSections({ ...defaultSetup(), teacherAreas: { fine: false, gross: false, sensory: false } }, o).find((s) => s.id === "teacher")!;
     expect(sectionText(withConcerns, "he")).toContain("Concerns were reported.");
-    expect(sectionText(without, "he")).toContain("Record review and analysis of the teacher rating checklist form");
+    expect(sectionText(without, "he")).toContain("The teacher rating checklist indicates that");
   });
 
   it("adds the writer's own screen items and hides built-in ones per grade", () => {

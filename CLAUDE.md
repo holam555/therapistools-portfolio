@@ -60,10 +60,13 @@ The Report tab (`apps/iep/src/report/`) is the main IEP flow: setup, a Word
 draft with fixed wording, openers and yellow [[blanks]], and one AI prompt per
 section. Content lives in `ot-pack.ts` and `ot-screen.ts` (the fine motor
 screen is the only part that changes with grade: K–1, 2–5, 6–8; 9–12 borrows
-6–8). Its fixed wording follows the author's reports; every sample sentence
-and test fixture is fictional (rule 4), so never paste real report text into
-the code. Keep the wording, use {{student}} once per section then pronoun
-tokens, and never add a real name. Blanks can name a dropdown list as
+6–8). Its wording is a generic sample (rewritten 2026-11-03); the owner's own
+wording lives only in their template edits, backup file and account, so never
+paste real report text into the code, and every sample sentence and test
+fixture is fictional (rule 4). `report/freeze.ts` runs once per browser: a
+browser that used the tool before the rewrite keeps its wording as its own
+edits. Keep the structure and block ids, use {{student}} once per section
+then pronoun tokens, and never add a real name. Blanks can name a dropdown list as
 `[[label::list]]` (lists in `options.ts`); others offer sample sentences from
 the block's examples (`samples.ts`). Ratings use one model, the rating grid
 (`grids.ts`: groups of items × levels, a sentence pattern per level with
@@ -88,10 +91,11 @@ preview, prompts and Word download shared by both builders. "Build from my
 document" is plain rules, no AI: `report/docx-read.ts` reads a .docx in the
 browser (jszip + DOMParser) or pasted text; `report/import-doc.ts` drafts
 sections, assessments, grids, blanks, dropdowns and hints, and leaves
-identifying lines out; `ui/ImportDocument.tsx` is the review screen. The
-owner decided other disciplines do not copy the OT template; `packFromOt`
-stays as the basis for future pre-made templates and a parity test. Library,
-Import, Builder and Output still exist and are due to retire.
+identifying lines out; `ui/ImportDocument.tsx` is the review screen. Every
+other discipline also offers a pre-made generic pack (`report/premade/`),
+written fresh rather than copied from OT, as the owner decided; `packFromOt`
+stays for a parity test. Library, Import, Builder and Output still exist and
+are due to retire.
 
 ## Definition of done
 
@@ -104,9 +108,8 @@ the changed tool works in `npm run preview`. Pushing to `main` publishes it.
   Moving them to `shared/fonts` needs print QA of every template first.
 - IEP Writer: let other disciplines build a report template from scratch or
   from a copy of OT's; then retire Library, Import, Builder and Output.
-- IEP Writer accounts went live on 2026-11-03 (docs/ACCOUNTS.md). Still
-  open: enabling the Google provider in the Supabase dashboard, and the
-  owner signing in once from the browser that holds their real template.
+- IEP Writer accounts went live on 2026-11-03 (docs/ACCOUNTS.md). The
+  owner's own wording is in their account; the code holds a generic sample.
 - Cloudflare Web Analytics is still switched on in the Cloudflare dashboard
   (the server blocks it with `no-transform`); the Cloudflare account owner
   turns it off (docs/INFRA.md).

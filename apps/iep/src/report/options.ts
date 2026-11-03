@@ -23,12 +23,7 @@ export const OPTION_LISTS: Record<string, OptionList> = {
   grasp: { options: ["tripod", "dynamic tripod", "static tripod", "lateral tripod", "quadrupod", "thumb wrap", "interdigital", "barrel", "fisted (palmar)"] },
   completedBy: { options: ["general education teacher", "special education teacher", "classroom teacher", "school counselor", "classroom aide"] },
   delayFrequency: {
-    options: [
-      "fine motor skill delays the majority of the time (80–100%)",
-      "significant fine motor delays 80–100% of the time",
-      "fine motor skill delays some of the time (51–79%)",
-      "occasional fine motor skill delays (21–50%)",
-    ],
+    options: ["fine motor difficulties most of the time", "fine motor difficulties some of the time", "occasional fine motor difficulties", "significant fine motor difficulties in every area rated"],
   },
   disability: {
     options: [

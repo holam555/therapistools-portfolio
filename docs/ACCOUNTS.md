@@ -111,13 +111,17 @@ one account, with its last sign-in time. There is no other counter.
    built-in template keeps working without sign-in. The Pro plan does not
    pause.
 
-## Moving the owner's own template into their account
+## The owner's own template (done 2026-11-03)
 
-The owner's real template lives in their browser (Edit template) and backup
-file; the code holds only fictional wording. Sign in once in that browser:
-the account is empty, so the browser's copy is uploaded. From then on it
-loads on any device they sign in on. The public, pre-sign-in template is the
-fictional built-in one.
+Until 2026-11-03 the built-in OT wording followed the owner's reports. Release
+`0d70dde` added `apps/iep/src/report/freeze.ts`: at start-up, a browser that
+had used the tool before copied every built-in paragraph, label, sample,
+title and dropdown list into its own template edits, once. The owner opened
+the site in their usual browser while signed in, so the full wording went to
+their account. The next release rewrote the built-in template as a generic
+sample. Now: new visitors get the generic sample; the owner's wording exists
+only in their browser, backup file and account, and "Reset to original" gives
+the generic sample.
 
 ## Changing the privacy page
 

@@ -101,16 +101,17 @@ to Vercel, so there are no old addresses to redirect.
   - The built-in OT template is in the code, so every visitor gets it; edits
     and own templates stay in that person's browser and backup file, and in
     their account if they sign in (ACCOUNTS.md).
-- **Disciplines:** the IEP Writer asks for one, and the picker says only OT
-  has a pre-made template. OT uses the built-in template. Every other
-  discipline builds its own template pack on the Report tab: from their own
-  document, or blank. The owner decided other disciplines must **not** copy
-  the OT template (a greyed "pre-made template, coming next" stands in).
+- **Disciplines:** the IEP Writer asks for one. OT uses the built-in
+  template; every other discipline starts a template pack on the Report tab
+  from a pre-made generic sample (`src/report/premade/`, added 2026-11-03),
+  from their own document, or blank. The owner decided other disciplines
+  must **not** copy the OT template, so the samples were written fresh.
   The older Library, Import, Builder and Output tabs still exist and are due
   to retire.
-- **The template's fixed wording** follows the owner's own reports in
-  `IEP template.docx` at the repository root. That file is git-ignored on
-  purpose; never commit it. The repository is public, so every sample
+- **The built-in OT wording** was the owner's own until 2026-11-03; it is now
+  a generic sample, and the owner's wording lives in their account
+  (ACCOUNTS.md). The owner's `IEP template.docx` at the repository root is
+  git-ignored on purpose; never commit it. The repository is public, so every sample
   sentence, starter-library sentence and test fixture in the code is
   fictional, written on 2026-10-26 to replace the owner's real examples.
   Keep it that way: never put the owner's report text into the code.
@@ -146,8 +147,9 @@ to Vercel, so there are no old addresses to redirect.
    - Not yet tried on the owner's real district form (a 47-page PDF outside
      the repository): ask them to save it as Word and run it through, then
      tune the rules on what comes out wrong.
-   - Pre-made templates for other disciplines: not started (`packFromOt` is
-     the model for one).
+   - Done 2026-11-03: pre-made generic templates for the other five
+     disciplines (`src/report/premade/`), and the first-visit notice that
+     offers sign-in or the sample template.
    - Then retire the old Library, Import, Builder and Output tabs.
 2. **9–12 fine motor screen,** when the owner sends one.
 3. **Open questions to raise with the owner:** whether the dropdown choices

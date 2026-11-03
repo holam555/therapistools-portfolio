@@ -10,7 +10,7 @@ import { DisciplinePicker } from "./ui/DisciplinePicker";
 import { DISCIPLINES, getDiscipline, type DisciplineId } from "./model/disciplines";
 import { loadDiscipline, saveDiscipline } from "./model/storage";
 import { AccountProvider, useAccount } from "./account/AccountProvider";
-import { AccountButton, ConflictNotice } from "./ui/Account";
+import { AccountButton, ConflictNotice, WelcomeNotice } from "./ui/Account";
 
 type Tab = "report" | "library" | "import" | "builder" | "output" | "settings";
 
@@ -96,6 +96,7 @@ function Shell() {
         </div>
       </header>
       <ConflictNotice />
+      <WelcomeNotice />
       {fresh && !dismissed && (
         <div className="notice notice-info">
           {current.hasStarter ? (
@@ -105,8 +106,8 @@ function Shell() {
             </>
           ) : (
             <>
-              Build a report template for {current.label.toLowerCase()} in <strong>Report</strong>: start blank, copy the OT template, or (soon) build
-              one from your own document. The older <strong>Library</strong> and <strong>Builder</strong> tabs still work for sentence banks.
+              Start a report template for {current.label.toLowerCase()} in <strong>Report</strong>: the pre-made generic sample, your own Word document,
+              or blank. The older <strong>Library</strong> and <strong>Builder</strong> tabs still work for sentence banks.
             </>
           )}{" "}
           <button type="button" className="link" onClick={() => setDismissed(true)}>

@@ -227,6 +227,74 @@ function SignInForm({ onDone }: { onDone: () => void }) {
   );
 }
 
+const WELCOME_KEY = "easyiep.welcome.seen";
+
+/**
+ * First visit in this browser, when accounts are on and nobody is signed in:
+ * sign in to use your own template, or try the built-in sample first. Shown
+ * once; the flag holds nothing but "seen".
+ */
+export function WelcomeNotice() {
+  const { enabled, ready, user } = useAccount();
+  const [seen, setSeen] = useState(() => {
+    try {
+      return localStorage.getItem(WELCOME_KEY) === "1";
+    } catch {
+      return true;
+    }
+  });
+  const [signIn, setSignIn] = useState(false);
+  const dismiss = () => {
+    try {
+      localStorage.setItem(WELCOME_KEY, "1");
+    } catch {
+      /* storage unavailable */
+    }
+    setSeen(true);
+  };
+  useEffect(() => {
+    if (user && !seen) dismiss();
+  }, [user, seen]);
+  useEffect(() => {
+    if (seen || !enabled || !ready || user) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && dismiss();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [seen, enabled, ready, user]);
+  if (signIn) return <AccountDialog onClose={() => setSignIn(false)} />;
+  if (seen || !enabled || !ready || user) return null;
+  return (
+    <div className="modal-backdrop" onClick={dismiss} role="presentation">
+      <div className="modal account-modal" role="dialog" aria-modal="true" aria-labelledby="welcome-title" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2 id="welcome-title">Welcome to the IEP Writer</h2>
+          <button type="button" className="btn btn-sm btn-ghost" onClick={dismiss} aria-label="Close">
+            ✕
+          </button>
+        </div>
+        <div className="account-panel">
+          <p>
+            <strong>Sign in</strong> to use your own report template. It is kept in your account and follows you to any computer.
+          </p>
+          <p>
+            Or <strong>try it first</strong> with the built-in sample template: generic wording with fictional examples, which you can edit
+            as you go. You can sign in later from the button at the top.
+          </p>
+          <p className="hint">Either way, the reports you write and the blanks you fill never leave this browser.</p>
+          <div className="row gap wrap modal-actions">
+            <button type="button" className="btn btn-primary" onClick={() => (dismiss(), setSignIn(true))}>
+              Sign in
+            </button>
+            <button type="button" className="btn" onClick={dismiss}>
+              Try it with the sample template
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Shown under the header when the account and this browser disagree. */
 export function ConflictNotice() {
   const { conflicts, resolveConflict, sync } = useAccount();

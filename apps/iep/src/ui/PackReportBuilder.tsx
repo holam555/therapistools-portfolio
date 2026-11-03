@@ -6,6 +6,7 @@ import {
   type PackAssessment, type PackBlock, type PackSection, type TemplatePack,
 } from "../report/pack";
 import { ImportDocument } from "./ImportDocument";
+import { premadePack } from "../report/premade";
 import { loadSetup, saveSetup } from "../report/setup";
 import type { Block, ReportSetup } from "../report/types";
 import { SetupBasics, useFlash, useValues } from "./ReportBuilder";
@@ -24,11 +25,11 @@ export function PackReportBuilder() {
   const current = getDiscipline(discipline);
   const [pack, setPack] = useState<TemplatePack | null>(() => loadPack(discipline));
   useEffect(() => savePack(discipline, pack), [discipline, pack]);
-  if (!pack) return <PackStart label={current.label} onChoose={setPack} />;
+  if (!pack) return <PackStart label={current.label} premade={() => premadePack(discipline)} onChoose={setPack} />;
   return <PackEditor pack={pack} setPack={setPack} onDiscard={() => setPack(null)} />;
 }
 
-function PackStart({ label, onChoose }: { label: string; onChoose: (p: TemplatePack) => void }) {
+function PackStart({ label, premade, onChoose }: { label: string; premade: () => TemplatePack | null; onChoose: (p: TemplatePack) => void }) {
   const [importing, setImporting] = useState(false);
   if (importing) return <ImportDocument disciplineLabel={label} onDone={onChoose} onCancel={() => setImporting(false)} />;
   return (
@@ -47,9 +48,16 @@ function PackStart({ label, onChoose }: { label: string; onChoose: (p: TemplateP
           <strong>Start blank</strong>
           <span className="hint">One summary section to begin with. Add your own sections and assessments.</span>
         </button>
-        <button type="button" className="start-choice" disabled title="Coming next">
+        <button
+          type="button"
+          className="start-choice"
+          onClick={() => {
+            const p = premade();
+            if (p) onChoose(p);
+          }}
+        >
           <strong>Pre-made {label.toLowerCase()} template</strong>
-          <span className="hint">Coming next. Only occupational therapy has a pre-made template so far.</span>
+          <span className="hint">A generic sample report for {label.toLowerCase()}: assessments, checklists, summary, next steps, services and a goal, with plain wording and fictional examples. Change any of it.</span>
         </button>
       </div>
     </section>
