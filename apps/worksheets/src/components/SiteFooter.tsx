@@ -15,11 +15,13 @@ export default function SiteFooter() {
           <div className="lg:pr-6">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <rect x="3" y="3" width="7" height="7" />
-                  <rect x="14" y="3" width="7" height="7" />
-                  <rect x="3" y="14" width="7" height="7" />
-                  <circle cx="17.5" cy="17.5" r="3.5" />
+                <svg width="18" height="18" viewBox="0 0 64 64" aria-hidden="true">
+                  {/* The Therapistools mark (shared/logo.svg): a T whose stem is a pencil. */}
+                  <rect x="13" y="12" width="38" height="10" rx="5" fill="#fff" />
+                  <rect x="27" y="21" width="10" height="4" fill="#ee7c2b" />
+                  <rect x="27" y="25" width="10" height="21" fill="#fff" />
+                  <path d="M27 46h10l-5 9z" fill="#f4e3c4" />
+                  <path d="M30 51.2h4L32 55z" fill="#1b5b54" />
                 </svg>
               </div>
               <p className="font-display text-base font-extrabold text-foreground">Therapistools Worksheets</p>

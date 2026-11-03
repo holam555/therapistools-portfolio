@@ -8,9 +8,9 @@
  */
 import { BRAND, SITE_ORIGIN, TOOLS } from "./brand.js";
 
-/** The logo mark: three squares and a circle, inherited from the worksheet app. */
+/** The logo mark: a T whose stem is a pencil (shared/logo.svg, without the teal square). */
 export const MARK_SVG =
-  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><circle cx="17.5" cy="17.5" r="3.5"/></svg>';
+  '<svg width="18" height="18" viewBox="0 0 64 64" aria-hidden="true"><rect x="13" y="12" width="38" height="10" rx="5" fill="#fff"/><rect x="27" y="21" width="10" height="4" fill="#ee7c2b"/><rect x="27" y="25" width="10" height="21" fill="#fff"/><path d="M27 46h10l-5 9z" fill="#f4e3c4"/><path d="M30 51.2h4L32 55z" fill="#1b5b54"/></svg>';
 
 const escape = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 

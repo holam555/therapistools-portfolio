@@ -78,7 +78,7 @@ one account, with its last sign-in time. There is no other counter.
    application; the authorised redirect URI is the one Supabase shows on the
    provider page (`https://<ref>.supabase.co/auth/v1/callback`). The secret
    stays in Supabase; never put it in this repository. The consent
-   screen asks for a logo (`shared/logo-512.png`), the privacy policy
+   screen asks for a logo (`shared/logo-120.png`; `logo-512.png` for larger uses), the privacy policy
    (`https://www.therapistools.com/privacy/`) and the terms of use
    (`https://www.therapistools.com/terms/`, `apps/home/terms/`), so those
    pages must be live before Google verifies the app. The Supabase secret
