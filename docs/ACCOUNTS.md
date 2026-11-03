@@ -77,12 +77,25 @@ one account, with its last sign-in time. There is no other counter.
    Services > Credentials > Create credentials > OAuth client ID > Web
    application; the authorised redirect URI is the one Supabase shows on the
    provider page (`https://<ref>.supabase.co/auth/v1/callback`). The secret
-   stays in Supabase; never put it in this repository.
-4. **Email codes.** Authentication > Email Templates > Magic Link: make the
-   body include the code, `{{ .Token }}`, next to the link (the app asks for
-   the code; the link also works on the same device). Authentication >
-   Providers > Email: leave "Confirm email" as you like; the code path does
-   not need it.
+   stays in Supabase; never put it in this repository. The consent
+   screen asks for a logo (`shared/logo-512.png`), the privacy policy
+   (`https://www.therapistools.com/privacy/`) and the terms of use
+   (`https://www.therapistools.com/terms/`, `apps/home/terms/`), so those
+   pages must be live before Google verifies the app. The Supabase secret
+   key is never needed by this repository or by anyone working on it.
+4. **Email sender and templates.** Supabase only lets you edit the email
+   templates once a custom SMTP sender is set, and its built-in sender allows
+   about two emails an hour, so set one first: a Resend account (free tier),
+   the domain verified with the DNS records Resend lists (added in Cloudflare;
+   they sit on a subdomain and do not clash with the email-forwarding records),
+   and a sending-only API key pasted into Supabase > Project Settings >
+   Authentication > SMTP Settings (host `smtp.resend.com`, port 465, user
+   `resend`, password the key, sender `noreply@therapistools.com`). The key
+   is a secret and lives in Supabase only. Then Authentication > Email
+   Templates: paste `apps/iep/supabase/email-templates/` (its README gives
+   the subject lines). Every template carries `{{ .Token }}` because the app
+   asks for the code; Confirm signup is the one a new address receives. Raise
+   Authentication > Rate Limits > emails from 2 an hour to about 30.
 5. **Redirect URLs.** Authentication > URL Configuration: Site URL
    `https://www.therapistools.com/iep/`; Redirect URLs add
    `https://www.therapistools.com/iep/`, `http://localhost:4300/iep/`

@@ -41,7 +41,7 @@ cpSync(app("home"), out, { recursive: true });
 cpSync(join(root, "shared"), join(out, "shared"), { recursive: true, filter: (src) => !src.endsWith(".d.ts") });
 
 // Sanity checks: every entry point exists, and no local file paths leaked into the output.
-const required = ["shared/brand.css", "shared/suite-bar.js", "index.html", "privacy/index.html", "robots.txt", "llms.txt", "worksheets/index.html", "scheduler/index.html", "iep/index.html"];
+const required = ["shared/brand.css", "shared/suite-bar.js", "index.html", "privacy/index.html", "terms/index.html", "robots.txt", "llms.txt", "worksheets/index.html", "scheduler/index.html", "iep/index.html"];
 for (const f of required) if (!existsSync(join(out, f))) throw new Error(`missing ${f} in dist`);
 function* files(dir) {
   for (const e of readdirSync(dir)) {
