@@ -104,8 +104,9 @@ the changed tool works in `npm run preview`. Pushing to `main` publishes it.
   Moving them to `shared/fonts` needs print QA of every template first.
 - IEP Writer: let other disciplines build a report template from scratch or
   from a copy of OT's; then retire Library, Import, Builder and Output.
-- IEP Writer accounts are built but switched off until the owner fills
-  `apps/iep/.env` and updates `infra/publish.sh` on the box (docs/ACCOUNTS.md).
+- IEP Writer accounts went live on 2026-11-03 (docs/ACCOUNTS.md). Still
+  open: enabling the Google provider in the Supabase dashboard, and the
+  owner signing in once from the browser that holds their real template.
 - Cloudflare Web Analytics is still switched on in the Cloudflare dashboard
   (the server blocks it with `no-transform`); the Cloudflare account owner
   turns it off (docs/INFRA.md).

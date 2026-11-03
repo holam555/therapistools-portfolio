@@ -117,12 +117,13 @@ to Vercel, so there are no old addresses to redirect.
 
 ## Next steps, in the owner's likely order
 
-0. **Switch accounts on** (code is done, 2026-11-02; needs the owner's
-   hands): create the Supabase project, run the migration, set up Google
-   sign-in and the email code template, put the URL and publishable key in
-   `apps/iep/.env`, and update `infra/publish.sh` on the box. Steps in
-   [ACCOUNTS.md](ACCOUNTS.md). Until `.env` is filled the sign-in button is
-   hidden and the page makes no requests. Open question for the owner: the
+0. **Accounts are live** (2026-11-03): Supabase project, migration,
+   custom SMTP, email templates, `apps/iep/.env` and the publish script on
+   the box are all done ([ACCOUNTS.md](ACCOUNTS.md)). Left for the owner:
+   turn the Google provider on in the Supabase dashboard (Google Cloud side
+   is done; Supabase still reports it disabled), then sign in once from the
+   browser that holds their real template so it uploads, and check it
+   appears from a second browser. Open question for the owner: the
    built-in template's fixed paragraphs still follow their district's wording
    (samples are fictional); decide whether to rewrite them generically now
    that their real template can live in their account.
