@@ -118,16 +118,14 @@ to Vercel, so there are no old addresses to redirect.
 
 ## Next steps, in the owner's likely order
 
-0. **Accounts are live** (2026-11-03): Supabase project, migration,
-   custom SMTP, email templates, `apps/iep/.env` and the publish script on
-   the box are all done ([ACCOUNTS.md](ACCOUNTS.md)). Left for the owner:
-   turn the Google provider on in the Supabase dashboard (Google Cloud side
-   is done; Supabase still reports it disabled), then sign in once from the
-   browser that holds their real template so it uploads, and check it
-   appears from a second browser. Open question for the owner: the
-   built-in template's fixed paragraphs still follow their district's wording
-   (samples are fictional); decide whether to rewrite them generically now
-   that their real template can live in their account.
+0. **Accounts are live and the owner's template is in their account**
+   (2026-11-03): Supabase project, migration, custom SMTP, email templates,
+   Google sign-in, `apps/iep/.env` and the publish script on the box are
+   all done ([ACCOUNTS.md](ACCOUNTS.md)). The built-in OT template is now a
+   generic sample; the owner's wording exists only in their browser, backup
+   file and account. Two generated lines (the summary's sensory sentence,
+   the goal's first line) could not be carried over and use the generic
+   wording; making them editable is a possible follow-up.
 1. **Report templates for other disciplines** (plan agreed with the owner on
    2026-10-26). A new user chooses one of three starts: blank, a pre-made
    template (OT), or their own document. Steps, each shipped on its own:
