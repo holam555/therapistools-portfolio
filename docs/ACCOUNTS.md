@@ -123,6 +123,13 @@ sample. Now: new visitors get the generic sample; the owner's wording exists
 only in their browser, backup file and account, and "Reset to original" gives
 the generic sample.
 
+Second move, same day: the OT template is becoming a pack the writer owns,
+like every other discipline, so the built-in OT template can take a different
+shape. `apps/iep/src/report/adopt.ts` turns a browser's OT edits into its own
+pack once (ids are kept, so filled blanks and ticks carry over); the account
+then holds it as kind `pack`. The old `overrides` rows stay in the table
+unused.
+
 ## Changing the privacy page
 
 Any change here changes what leaves the device, so

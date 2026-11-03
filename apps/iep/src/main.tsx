@@ -5,9 +5,11 @@ import "../../../shared/brand.css";
 import "../../../shared/suite-bar.js";
 import "./styles.css";
 import { freezeTemplateOnce } from "./report/freeze";
+import { adoptOtPackOnce } from "./report/adopt";
 
-// Before anything reads the template (docs: src/report/freeze.ts).
+// Before anything reads the template (src/report/freeze.ts, then src/report/adopt.ts).
 freezeTemplateOnce();
+adoptOtPackOnce();
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

@@ -72,6 +72,8 @@ interface BlockBase {
   pattern?: string;
   /** What each {slot} in `pattern` stands for, for this setup. */
   slots?: Record<string, string>;
+  /** For a line written several times from one template paragraph (objectives): that paragraph's id. */
+  sourceId?: string;
 }
 export type Block =
   | ({ kind: "heading" } & BlockBase)

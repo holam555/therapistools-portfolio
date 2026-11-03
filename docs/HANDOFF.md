@@ -125,7 +125,10 @@ to Vercel, so there are no old addresses to redirect.
    generic sample; the owner's wording exists only in their browser, backup
    file and account. Two generated lines (the summary's sensory sentence,
    the goal's first line) could not be carried over and use the generic
-   wording; making them editable is a possible follow-up.
+   wording; they became editable the same day (pattern with slots). Next:
+   the OT template becomes a pack the owner owns (`report/adopt.ts`), so the
+   built-in OT template can be rewritten in a different shape; then the old
+   OT code template, overrides layer and freeze retire.
 1. **Report templates for other disciplines** (plan agreed with the owner on
    2026-10-26). A new user chooses one of three starts: blank, a pre-made
    template (OT), or their own document. Steps, each shipped on its own:

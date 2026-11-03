@@ -1,12 +1,14 @@
 import type { DisciplineId } from "../model/disciplines";
 import { announceTemplateChange } from "../account/events";
-import { SPM_GRID } from "./spm";
-import { cloneGrid, groupSentences, levelLine, normalizeGrid, type GridDef, type GridRatings } from "./grids";
+
+import { cloneGrid, gridSummaryPhrase, groupSentences, levelLine, normalizeGrid, type GridDef, type GridRatings } from "./grids";
 import { OPTION_LISTS, type OptionList } from "./options";
-import { otReportSections } from "./ot-pack";
-import { SCREEN_BORROWED } from "./ot-screen";
+import { otReportSections, OT_REPORT_TITLE } from "./ot-pack";
+import { SCREEN_BORROWED, screenItemsFor } from "./ot-screen";
+import { applyScreenOverrides, gridFor, listFor, type TemplateOverrides } from "./overrides";
+import { fillPattern } from "./render";
 import { defaultSetup, withGrade } from "./setup";
-import { GRADE_GROUPS, type Block, type GradeGroup, type ReportSection, type ReportSetup, type ReportType } from "./types";
+import { GRADE_GROUPS, type Block, type GoalArea, type GradeGroup, type ReportSection, type ReportSetup, type ReportType, type ServiceType, type TeacherArea, type TeacherAreas } from "./types";
 
 /**
  * A template pack: one discipline's report template as plain data, built and
@@ -16,11 +18,31 @@ import { GRADE_GROUPS, type Block, type GradeGroup, type ReportSection, type Rep
  * writer's own document. Packs hold template wording only, never a student.
  */
 
-/** When a section appears. Every field left out means "always". */
+/** When a section or paragraph appears. Every field left out means "always". */
 export interface PackCondition {
   reportType?: ReportType;
   concerns?: boolean;
   grades?: GradeGroup[];
+  /** Direct or indirect services, as chosen in setup. */
+  serviceType?: ServiceType;
+  /** Teacher checklist areas that must be ticked (true) or not ticked (false). */
+  teacherAreas?: Partial<TeacherAreas>;
+  /** Whether at least one teacher checklist area is ticked. */
+  anyTeacherArea?: boolean;
+  /** A related standard the writer chose under the goal. */
+  goalArea?: GoalArea;
+  /** Assessments that must be on (true) or off (false), by id. */
+  assessments?: Record<string, boolean>;
+}
+
+/** What a pack paragraph can carry besides its text. */
+export interface PackBlockExtras {
+  /** Shown only while the condition holds. */
+  when?: PackCondition;
+  /** A tick box under its assessment ("What did you do?"): shown only when ticked (setup.screenItems holds the ids). */
+  optional?: boolean;
+  /** Written once per objective chosen in setup, ids numbered from 1. */
+  repeat?: "objectives";
 }
 
 /** A paragraph written from a rating grid's ratings: one line per group (byGroup) or per level (byLevel). */
@@ -29,7 +51,7 @@ export interface GridBlock {
   id: string;
   grid: string;
 }
-export type PackBlock = Block | GridBlock;
+export type PackBlock = (Block & PackBlockExtras) | GridBlock;
 
 export interface PackSection {
   id: string;
@@ -67,7 +89,58 @@ export function conditionHolds(when: PackCondition | undefined, setup: ReportSet
   if (when.reportType !== undefined && when.reportType !== setup.reportType) return false;
   if (when.concerns !== undefined && when.concerns !== setup.concerns) return false;
   if (when.grades && !when.grades.includes(setup.grade)) return false;
+  if (when.serviceType !== undefined && when.serviceType !== setup.serviceType) return false;
+  if (when.teacherAreas) for (const [k, v] of Object.entries(when.teacherAreas)) if (setup.teacherAreas[k as TeacherArea] !== v) return false;
+  if (when.anyTeacherArea !== undefined && (setup.teacherAreas.fine || setup.teacherAreas.gross || setup.teacherAreas.sensory) !== when.anyTeacherArea) return false;
+  if (when.goalArea !== undefined && !setup.goalAreas.includes(when.goalArea)) return false;
+  if (when.assessments) for (const [k, v] of Object.entries(when.assessments)) if (assessmentOn(setup, k) !== v) return false;
   return true;
+}
+
+/** Marks in a paragraph the app writes in: {count} (objectives chosen) and {summary:<grid id>} (that grid's summary phrase). */
+function packSlots(text: string, grids: Record<string, GridDef>, setup: ReportSetup): Record<string, string> | undefined {
+  const slots: Record<string, string> = {};
+  if (text.includes("{count}")) slots.count = String(Math.max(1, setup.objectives));
+  for (const m of text.matchAll(/\{summary:([A-Za-z0-9_-]+)\}/g)) {
+    const g = grids[m[1]];
+    slots[`summary:${m[1]}`] = (g && gridSummaryPhrase(g, setup.ratings[g.id] ?? {})) || "[[results by scale]]";
+  }
+  return Object.keys(slots).length ? slots : undefined;
+}
+
+/** Every paragraph that is a tick box under an assessment, with the assessment it belongs to. */
+export function optionalBlocks(pack: TemplatePack): { assessment: PackAssessment; section: PackSection; block: Block & PackBlockExtras }[] {
+  const out: { assessment: PackAssessment; section: PackSection; block: Block & PackBlockExtras }[] = [];
+  for (const assessment of pack.assessments)
+    for (const section of assessment.sections) for (const block of section.blocks) if (block.kind !== "grid" && block.optional) out.push({ assessment, section, block });
+  return out;
+}
+
+/** Which setup choices this pack reacts to, so the builder shows only the controls that matter. */
+export function packUses(pack: TemplatePack): { teacherAreas: Set<string>; serviceType: boolean; objectives: boolean; goalAreas: GoalArea[] } {
+  const teacherAreas = new Set<string>();
+  let serviceType = false;
+  let objectives = false;
+  const goalAreas: GoalArea[] = [];
+  const note = (when: PackCondition | undefined, assessmentId?: string) => {
+    if (!when) return;
+    if ((when.teacherAreas || when.anyTeacherArea !== undefined) && assessmentId) teacherAreas.add(assessmentId);
+    if (when.serviceType !== undefined) serviceType = true;
+    if (when.goalArea !== undefined && !goalAreas.includes(when.goalArea)) goalAreas.push(when.goalArea);
+  };
+  const walk = (sections: PackSection[], assessmentId?: string) => {
+    for (const s of sections) {
+      note(s.when, assessmentId);
+      for (const b of s.blocks) {
+        if (b.kind === "grid") continue;
+        note(b.when, assessmentId);
+        if (b.repeat === "objectives" || b.text.includes("{count}")) objectives = true;
+      }
+    }
+  };
+  for (const a of pack.assessments) walk(a.sections, a.id);
+  walk(pack.sections);
+  return { teacherAreas, serviceType, objectives, goalAreas };
 }
 
 /** Every rating grid in the pack, by id. */
@@ -96,8 +169,41 @@ function levelLineOf(grid: GridDef, value: string, ratings: GridRatings): string
 }
 
 function toSection(s: PackSection, grids: Record<string, GridDef>, setup: ReportSetup): ReportSection {
-  const blocks = s.blocks.flatMap((b) => (b.kind === "grid" ? expandGrid(b, grids, setup) : [b]));
-  return { id: s.id, title: s.title, blocks, examples: s.examples, ...(s.notesHint ? { notesHint: s.notesHint } : {}) };
+  const blocks: Block[] = [];
+  // A subheading whose paragraphs were all left out (unticked, or hidden by a condition) is left out too.
+  let heading: { at: number; lost: boolean } | null = null;
+  const closeHeading = () => {
+    if (heading?.lost && blocks.length === heading.at + 1) blocks.splice(heading.at, 1);
+    heading = null;
+  };
+  for (const b of s.blocks) {
+    if (b.kind === "grid") {
+      blocks.push(...expandGrid(b, grids, setup));
+      continue;
+    }
+    const { when, optional, repeat, ...plain } = b;
+    const shown = conditionHolds(when, setup) && (!optional || setup.screenItems.includes(plain.id ?? ""));
+    if (plain.kind === "subheading" || plain.kind === "heading") {
+      closeHeading();
+      if (!shown) continue;
+      heading = { at: blocks.length, lost: false };
+      blocks.push(plain);
+      continue;
+    }
+    if (!shown) {
+      if (heading) heading.lost = true;
+      continue;
+    }
+    const slots = packSlots(plain.text, grids, setup);
+    const make = (id: string | undefined, sourceId?: string): Block =>
+      ({ ...plain, id, ...(sourceId ? { sourceId } : {}), ...(slots ? { generated: true, pattern: plain.text, slots, text: fillPattern(plain.text, slots) } : {}) }) as Block;
+    if (repeat === "objectives") for (let i = 1; i <= Math.max(1, setup.objectives); i++) blocks.push(make(`${plain.id}${i}`, plain.id));
+    else blocks.push(make(plain.id));
+  }
+  closeHeading();
+  // A section with no samples of its own borrows its paragraphs'.
+  const examples = s.examples.length ? s.examples : blocks.flatMap((b) => b.examples ?? []);
+  return { id: s.id, title: s.title, blocks, examples, ...(s.notesHint ? { notesHint: s.notesHint } : {}) };
 }
 
 /** Is this assessment ticked? Unknown ones count as ticked, so a new assessment shows up at once. */
@@ -129,75 +235,162 @@ function copyLists(): Record<string, OptionList> {
   return Object.fromEntries(Object.entries(OPTION_LISTS).map(([k, v]) => [k, { ...v, options: [...v.options] }]));
 }
 
-/** Generated lines of one grid, in a row, become a single grid block; other generated lines become plain paragraphs. */
-function packBlocksOf(blocks: Block[]): PackBlock[] {
-  const out: PackBlock[] = [];
-  for (const b of blocks) {
-    // OT writes its SPM-2 lines with ids "spm-<level>"; the summary's sensory line stays a paragraph.
-    if (b.generated && b.grid && /^spm-/.test(b.id ?? "")) {
-      const last = out[out.length - 1];
-      if (last?.kind === "grid" && last.grid === b.grid) continue;
-      out.push({ kind: "grid", id: `grid-${b.grid}`, grid: b.grid });
-      continue;
-    }
-    const { generated: _g, grid: _grid, pattern: _p, slots: _s, ...rest } = b;
-    out.push(rest as Block);
-  }
+type Row = [id: string, extras?: PackBlockExtras];
+
+/** Every version of the OT report, so each paragraph it can write is seen once. */
+function otVariants(): ReportSetup[] {
+  const out: ReportSetup[] = [];
+  const areas: TeacherAreas[] = [
+    { fine: true, gross: true, sensory: true },
+    { fine: false, gross: false, sensory: false },
+    { fine: false, gross: true, sensory: false },
+    { fine: true, gross: false, sensory: true },
+  ];
+  for (const g of GRADE_GROUPS)
+    for (const reportType of ["evaluation", "annual"] as const)
+      for (const concerns of [true, false])
+        for (const teacherAreas of areas)
+          for (const serviceType of ["direct", "indirect"] as const)
+            for (const spm2 of [true, false])
+              out.push({ ...withGrade(defaultSetup(), g.id), reportType, concerns, teacherAreas, serviceType, assessments: { teacher: true, screen: true, beery: true, spm2 }, objectives: 3, goalAreas: ["writing", "cutting", "selfcare"] });
   return out;
 }
 
-function copySection(s: ReportSection, extra: Partial<PackSection> = {}): PackSection {
-  return { id: s.id, title: s.title, blocks: packBlocksOf(s.blocks), examples: [...s.examples], ...(s.notesHint ? { notesHint: s.notesHint } : {}), ...extra };
-}
-
 /**
- * The built-in OT template as a pack, for another discipline to start from.
- * What the OT code decides from setup becomes conditions: the teacher
- * checklist follows "concerns" (every area, or none), the fine motor screen
- * has one section per grade group with every item, services are direct, and
- * the goal lists three objectives and every standard, to hide what isn't
- * needed.
+ * The OT template, with a writer's edits laid over, as a pack that reads
+ * exactly the same for every setup. What the OT code decides at report time
+ * becomes conditions on paragraphs: which teacher areas were ticked, direct
+ * or indirect services, which standards, how many objectives, and which
+ * screen items were done (tick boxes). Section and paragraph ids are kept,
+ * so filled blanks and ticks carry over.
  */
-export function packFromOt(disciplineLabel: string): TemplatePack {
-  const base = defaultSetup();
-  const build = (p: Partial<ReportSetup>) => otReportSections({ ...base, ...p });
-  const pick = (sections: ReportSection[], id: string) => sections.find((s) => s.id === id)!;
+export function packFromOt(disciplineLabel: string, o?: TemplateOverrides): TemplatePack {
+  const sections = new Map<string, ReportSection>();
+  const blocks = new Map<string, Block>();
+  for (const setup of otVariants())
+    for (const s of otReportSections(withGrade(setup, setup.grade, o), o)) {
+      if (!sections.has(s.id)) sections.set(s.id, s);
+      for (const b of s.blocks) if (b.id && !blocks.has(`${s.id}/${b.id}`)) blocks.set(`${s.id}/${b.id}`, b);
+    }
+  /** A paragraph as the template writes it, or null when the writer hid it. */
+  const block = (sectionId: string, id: string): Block | null => {
+    const b = blocks.get(`${sectionId}/${id}`);
+    if (!b) return null;
+    const { generated: _g, grid: _grid, pattern, slots: _s, sourceId: _src, ...rest } = b;
+    return { ...rest, ...(pattern !== undefined ? { text: pattern } : {}) } as Block;
+  };
+  const must = (sectionId: string, id: string): Block => {
+    const b = block(sectionId, id);
+    if (!b) throw new Error(`OT template has no ${sectionId}/${id}`);
+    return b;
+  };
+  const section = (id: string, rows: (PackBlock | Row | null)[], extra: Partial<PackSection> = {}): PackSection => {
+    const s = sections.get(id);
+    if (!s) throw new Error(`OT template has no section ${id}`);
+    const packBlocks: PackBlock[] = [];
+    for (const r of rows) {
+      if (r === null) continue;
+      if (!Array.isArray(r)) {
+        packBlocks.push(r);
+        continue;
+      }
+      const b = block(id, r[0]);
+      if (b) packBlocks.push({ ...b, ...(r[1] ?? {}) } as PackBlock);
+    }
+    // Samples the section borrowed from its paragraphs come back through them.
+    const borrowed = JSON.stringify(s.blocks.flatMap((b) => b.examples ?? [])) === JSON.stringify(s.examples);
+    return { id, title: s.title, blocks: packBlocks, examples: borrowed ? [] : [...s.examples], ...(s.notesHint ? { notesHint: s.notesHint } : {}), ...extra };
+  };
 
-  const evalWith = build({ reportType: "evaluation", concerns: true, teacherAreas: { fine: true, gross: true, sensory: true } });
-  const evalWithout = build({ reportType: "evaluation", concerns: false, teacherAreas: { fine: false, gross: false, sensory: false } });
-  const annualWith = build({ reportType: "annual", concerns: true, objectives: 3, goalAreas: ["writing", "cutting", "selfcare"] });
-  const annualWithout = build({ reportType: "annual", concerns: false });
-
-  const screenSections: PackSection[] = [];
+  // The fine motor screen: one section, each grade group's items as tick boxes under their own subheadings.
+  const screenRows: (PackBlock | null)[] = [block("screen", "intro")];
   for (const g of GRADE_GROUPS) {
     if (SCREEN_BORROWED[g.id]) continue;
     const grades = [g.id, ...GRADE_GROUPS.filter((x) => SCREEN_BORROWED[x.id] === g.id).map((x) => x.id)];
-    const s = pick(otReportSections(withGrade(base, g.id)), "screen");
-    screenSections.push(copySection(s, { id: `screen-${g.id}`, when: { grades } }));
+    const when: PackCondition = { grades };
+    const items = applyScreenOverrides(screenItemsFor(g.id), g.id, o);
+    const group = (name: "classroom" | "supporting", heading: string) => {
+      const list = items.filter((i) => i.group === name);
+      if (!list.length) return;
+      screenRows.push({ ...must("screen", heading), id: `${heading}-${g.id}`, when } as PackBlock);
+      for (const i of list) {
+        const b = block("screen", i.id);
+        if (b) screenRows.push({ ...b, when, optional: true } as PackBlock);
+      }
+    };
+    group("classroom", "h-classroom");
+    group("supporting", "h-supporting");
+    for (const i of items.filter((x) => x.group === "paragraph")) {
+      const b = block("screen", i.id);
+      if (b) screenRows.push({ ...b, when, optional: true } as PackBlock);
+    }
   }
 
+  const sensory = block("summary", "sensory");
+  const spmName = "Sensory Processing Measure-2 School form and teacher report";
+  const any = { anyTeacherArea: true };
   const assessments: PackAssessment[] = [
-    { id: "teacher", label: "Teacher rating checklist", sections: [copySection(pick(evalWith, "teacher"), { id: "teacher-concerns", when: { concerns: true } }), copySection(pick(evalWithout, "teacher"), { id: "teacher-none", when: { concerns: false } })] },
-    { id: "screen", label: "Informal fine motor screen", sections: screenSections },
-    { id: "beery", label: "Beery VMI", sections: [copySection(pick(evalWith, "beery"))] },
-    { id: "spm2", label: "SPM-2 School form", sections: [copySection(pick(evalWith, "spm2"))], grid: cloneGrid(SPM_GRID) },
+    {
+      id: "teacher", label: "Teacher rating checklist",
+      sections: [
+        section("teacher", [
+          ["teacher-none", { when: { anyTeacherArea: false } }],
+          ["teacher-concerns", { when: { teacherAreas: { fine: true } } }],
+          ["teacher-fine-none", { when: { teacherAreas: { fine: false }, ...any } }],
+          ["teacher-gross", { when: { teacherAreas: { gross: true } } }],
+          ["teacher-gross-none", { when: { teacherAreas: { gross: false }, ...any } }],
+          ["teacher-sensory", { when: { teacherAreas: { sensory: true } } }],
+          ["teacher-sensory-none", { when: { teacherAreas: { sensory: false }, ...any } }],
+          ["teacher-accommodations", { when: any }],
+        ]),
+      ],
+    },
+    { id: "screen", label: "Informal fine motor screen", sections: [section("screen", screenRows)] },
+    { id: "beery", label: "Beery VMI", sections: [section("beery", [["intro"], ["vmi"], ["vp"], ["mc"]])] },
+    {
+      id: "spm2", label: "SPM-2 School form", grid: cloneGrid(gridFor("spm2", o)),
+      sections: [section("spm2", [["h-sensory"], ["definition"], ["completed-by"], { kind: "grid", id: "grid-spm2", grid: "spm2" }, ["composite"], ["def-social"], ["def-vision"], ["def-hearing"], ["def-touch"], ["def-body"], ["def-planning"], ["def-balance"]])],
+    },
   ];
 
-  const sections: PackSection[] = [
-    copySection(pick(evalWith, "summary"), { id: "summary-concerns", place: "after", when: { reportType: "evaluation", concerns: true } }),
-    copySection(pick(evalWithout, "summary"), { id: "summary-none", place: "after", when: { reportType: "evaluation", concerns: false } }),
-    copySection(pick(annualWith, "plop-header"), { place: "before", when: { reportType: "annual" } }),
-    ...["next-steps", "impact", "service", "goal"].map((id) => copySection(pick(annualWith, id), { place: "after", when: { concerns: true } })),
-    copySection(pick(annualWithout, "ending"), { place: "after", when: { reportType: "annual", concerns: false } }),
+  const packSections: PackSection[] = [
+    section("plop-header", [["reported-by"], ["h-record"], ["record-review"], ["h-present"]], { place: "before", when: { reportType: "annual" } }),
+    section(
+      "summary",
+      [
+        ["summary-none", { when: { concerns: false } }],
+        ["fine-motor", { when: { concerns: true } }],
+        sensory && ({ ...sensory, text: sensory.text.replace("{assessments}", spmName).replace("{results}", "{summary:spm2}"), when: { concerns: true, assessments: { spm2: true } } } as PackBlock),
+        sensory && ({ ...sensory, id: "sensory-other", text: sensory.text.replace("{assessments}", "[[sensory assessments used]]").replace("{results}", "[[results by scale]]"), when: { concerns: true, assessments: { spm2: false, teacher: true } } } as PackBlock),
+      ],
+      { place: "after", when: { reportType: "evaluation" } },
+    ),
+    section("next-steps", [["next-steps"], ["closing"]], { place: "after", when: { concerns: true } }),
+    section("impact", [["impact"]], { place: "after", when: { concerns: true } }),
+    section("service", [["service", { when: { serviceType: "direct" } }], ["service-indirect", { when: { serviceType: "indirect" } }]], { place: "after", when: { concerns: true } }),
+    section(
+      "goal",
+      [
+        ["goal-frame"],
+        { ...must("goal", "objective1"), id: "objective", repeat: "objectives" } as PackBlock,
+        ["h-standards"],
+        ["standard-writing", { when: { goalArea: "writing" } }],
+        ["standard-cutting", { when: { goalArea: "cutting" } }],
+        ["standard-selfcare", { when: { goalArea: "selfcare" } }],
+      ],
+      { place: "after", when: { concerns: true } },
+    ),
+    section("ending", [["ending"], ["closing"]], { place: "after", when: { reportType: "annual", concerns: false } }),
   ];
 
-  return {
-    version: 1,
-    titles: { evaluation: `${disciplineLabel} Evaluation Report`, annual: `${disciplineLabel} Annual Review` },
-    assessments,
-    sections,
-    lists: copyLists(),
-  };
+  const lists: Record<string, OptionList> = {};
+  for (const name of Object.keys(OPTION_LISTS)) {
+    const l = listFor(name, o)!;
+    lists[name] = { options: [...l.options], ...(l.multi ? { multi: true } : {}) };
+  }
+  const titles =
+    disciplineLabel === "Occupational Therapy" ? { ...OT_REPORT_TITLE } : { evaluation: `${disciplineLabel} Evaluation Report`, annual: `${disciplineLabel} Annual Review` };
+  return { version: 1, titles, assessments, sections: packSections, lists };
 }
 
 // ---------- storage ----------
@@ -217,6 +410,19 @@ function normalizeCondition(raw: unknown): PackCondition | undefined {
     const grades = r.grades.filter((g): g is GradeGroup => GRADE_GROUPS.some((x) => x.id === g));
     if (grades.length) out.grades = grades;
   }
+  if (r.serviceType === "direct" || r.serviceType === "indirect") out.serviceType = r.serviceType;
+  if (r.teacherAreas && typeof r.teacherAreas === "object") {
+    const areas: Partial<TeacherAreas> = {};
+    for (const k of ["fine", "gross", "sensory"] as const) if (typeof r.teacherAreas[k] === "boolean") areas[k] = r.teacherAreas[k];
+    if (Object.keys(areas).length) out.teacherAreas = areas;
+  }
+  if (typeof r.anyTeacherArea === "boolean") out.anyTeacherArea = r.anyTeacherArea;
+  if (r.goalArea === "writing" || r.goalArea === "cutting" || r.goalArea === "selfcare") out.goalArea = r.goalArea;
+  if (r.assessments && typeof r.assessments === "object") {
+    const on: Record<string, boolean> = {};
+    for (const [k, v] of Object.entries(r.assessments)) if (typeof v === "boolean") on[k] = v;
+    if (Object.keys(on).length) out.assessments = on;
+  }
   return Object.keys(out).length ? out : undefined;
 }
 
@@ -224,13 +430,17 @@ const KINDS = ["heading", "subheading", "para", "bullet", "numbered"] as const;
 
 function normalizeBlock(raw: unknown, i: number): PackBlock | null {
   if (!raw || typeof raw !== "object") return null;
-  const r = raw as { kind?: string; id?: string; grid?: string; text?: string; label?: string; examples?: unknown };
+  const r = raw as { kind?: string; id?: string; grid?: string; text?: string; label?: string; examples?: unknown; when?: unknown; optional?: unknown; repeat?: unknown };
   const id = str(r.id, `b${i + 1}`);
   if (r.kind === "grid") return typeof r.grid === "string" ? { kind: "grid", id, grid: r.grid } : null;
   if (!KINDS.includes(r.kind as (typeof KINDS)[number]) || typeof r.text !== "string") return null;
-  const b: Block = { kind: r.kind as Block["kind"], id, text: r.text } as Block;
+  const b: Block & PackBlockExtras = { kind: r.kind as Block["kind"], id, text: r.text } as Block;
   if (typeof r.label === "string" && (b.kind === "para" || b.kind === "bullet")) (b as { label?: string }).label = r.label;
   if (Array.isArray(r.examples)) b.examples = strs(r.examples);
+  const when = normalizeCondition(r.when);
+  if (when) b.when = when;
+  if (r.optional === true) b.optional = true;
+  if (r.repeat === "objectives") b.repeat = "objectives";
   return b;
 }
 

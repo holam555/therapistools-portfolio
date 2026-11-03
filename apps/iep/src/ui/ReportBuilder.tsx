@@ -11,6 +11,7 @@ import { blockKeyOf } from "../report/render";
 import { GRADE_GROUPS, TEACHER_AREAS, type AssessmentId, type Block, type GoalArea, type ReportSetup, type ReportValues, type ScreenItem } from "../report/types";
 import { AddScreenItemModal, EditBlockModal, GridEditorModal, ListEditorModal, TitleEditorModal } from "./TemplateEditors";
 import { PackReportBuilder } from "./PackReportBuilder";
+import { loadPack } from "../report/pack";
 import { RatingPanel, ReportOutput } from "./ReportOutput";
 import { confirmAction } from "./common";
 import { useApp } from "./state";
@@ -61,7 +62,9 @@ export function useValues(discipline: Parameters<typeof loadValues>[0], migrate?
  */
 export function ReportBuilder() {
   const { discipline } = useApp();
-  if (discipline !== "ot") return <PackReportBuilder />;
+  // OT keeps the built-in template until this browser has a pack of its own (src/report/adopt.ts).
+  const [ownPack] = useState(() => discipline === "ot" && !!loadPack("ot"));
+  if (discipline !== "ot" || ownPack) return <PackReportBuilder />;
   return <OtReportBuilder />;
 }
 

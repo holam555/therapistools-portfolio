@@ -83,9 +83,15 @@ setup choices: those with a `grid` open that grid's editor, the goal frame
 isn't editable.
 
 Other disciplines use a **template pack** (`report/pack.ts`): the same report
-as plain data (assessments with optional grids, sections with `when`
-conditions on report type, concerns and grade, dropdown lists), started blank
-or built from the writer's own document. The writer owns the pack, so edits
+as plain data (assessments with optional grids, sections and paragraphs with
+`when` conditions on report type, concerns, grade, service type, teacher
+areas, standards and assessments done; paragraphs can be tick boxes
+(`optional`, ticks in `setup.screenItems`), repeat per objective, and carry
+`{count}` and `{summary:<grid>}` slots), started blank, from a pre-made
+sample, or built from the writer's own document. `packFromOt(label, edits)`
+turns the OT template with a writer's edits into such a pack that reads
+identically (parity test over every setup); `report/adopt.ts` does that once
+per browser that has OT edits, after which OT uses the pack builder too. The writer owns the pack, so edits
 change it directly, with no overrides layer. `ui/ReportOutput.tsx` is the
 preview, prompts and Word download shared by both builders. "Build from my
 document" is plain rules, no AI: `report/docx-read.ts` reads a .docx in the
