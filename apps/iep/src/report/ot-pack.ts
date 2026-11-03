@@ -26,11 +26,13 @@ function teacherSection(setup: ReportSetup): ReportSection {
         {
           kind: "para", id: "teacher-none",
           text: "Record review and analysis of the teacher rating checklist form indicates {{student}} demonstrates age and grade level motor skills 80-100% as compared to peers for handwriting, manipulating school tools, and managing belongings. Gross motor skills are 80-100% as compared to peers for navigating the school setting. The sensory area is listed as no concerns that interfere with instruction or work production.",
+          examples: [
+            "Record review and analysis of the teacher rating checklist form indicates this student demonstrates age and grade level motor skills which support access to the curriculum. Based on information from the classroom teacher, her fine motor, gross motor and sensory skills do not limit her academic success at this time.",
+          ],
         },
       ],
-      examples: [
-        "Record review and analysis of the teacher rating checklist form indicates this student demonstrates age and grade level motor skills which support access to the curriculum. Based on information from the classroom teacher, her fine motor, gross motor and sensory skills do not limit her academic success at this time.",
-      ],
+      // Samples sit on the paragraph that defines this version of the section (see otReportSections).
+      examples: [],
       notesHint: "Anything the teacher noted, if you want to adjust the wording.",
     };
   }
@@ -62,16 +64,17 @@ function teacherSection(setup: ReportSetup): ReportSection {
   blocks.push({
     kind: "para", id: "teacher-accommodations",
     text: "To support {{their}} needs in the classroom, accommodations such as [[accommodations in use::accommodations]] are used.",
-  });
-  return {
-    id: "teacher",
-    title: "Teacher Rating Checklist",
-    blocks,
     examples: [
       "Based on the Teacher Rating Form completed by the special education teacher, [STUDENT] demonstrates fine motor skill delays some of the time (51–79%), which interfere with her ability to keep up with written work and manage her materials. Specific areas of concern include letter sizing, line adherence, coloring, cutting, buttoning, and opening containers. No gross motor concerns were reported, though the teacher noted that she chews on her sleeves and covers her ears during assemblies. To support these needs in the classroom, accommodations such as a chewable pencil topper, a seat near the door, and a visual schedule are used.",
       "Based on the Teacher Rating Form completed by the general education teacher, [STUDENT] demonstrates fine motor delays the majority of the time (80–100%), which interfere with his independence and access to the general education curriculum. Identified areas of concern include pencil grasp, letter formation, copying from the board, coloring, cutting, and zipping his coat. His sensory behaviors are also of concern, specifically rocking in his chair and touching classmates' belongings, which interfere with his functioning in the classroom setting. To support his overall performance and attention, effective classroom accommodations currently in use include a wobble cushion, a fidget kept in his desk, and a checklist for packing up.",
       "Based on the Teacher Rating Form completed by the physical education teacher, [STUDENT] demonstrates age and grade level fine motor skills for handwriting and managing belongings. Gross motor concerns were also reported: he loses his balance on the stairs and avoids running games some of the time (51–79%), which limits his participation in physical education and recess. To support his needs, accommodations such as a handrail reminder and a peer partner for playground games are used.",
     ],
+  });
+  return {
+    id: "teacher",
+    title: "Teacher Rating Checklist",
+    blocks,
+    examples: [],
     notesHint: "What the teacher checked on the rating form for each area ticked, and the accommodations in use.",
   };
 }
@@ -95,7 +98,7 @@ function screenSection(setup: ReportSetup, o?: TemplateOverrides): ReportSection
     id: "screen",
     title: "Informal Fine Motor Screen",
     blocks,
-    examples: chosen.flatMap((i) => i.examples),
+    examples: [],
     notesHint: "Your observations for each item you tested, in any order and as rough as you like.",
   };
 }
@@ -181,11 +184,12 @@ function summarySection(setup: ReportSetup, o?: TemplateOverrides): ReportSectio
           kind: "para", id: "summary-none",
           label: "Summary",
           text: "The evaluation results indicate that {{student}} demonstrates age- and grade-level motor skills that support {{their}} access to the school curriculum. {{Their}} fine motor, gross motor and sensory processing skills do not significantly limit {{their}} academic success. Functionally, {{they}} is able to [[functional skills observed]]. [[Formal assessment results]]. [[Teacher report on sensory processing]]. At this time, there are no motor or sensory concerns that significantly impact {{their}} ability to access the general education curriculum.",
+          examples: [
+            "Summary: The evaluation results indicate that [STUDENT] demonstrates age- and grade-level motor skills that support his access to the school curriculum. His fine motor, gross motor and sensory processing skills do not significantly limit his academic success. Functionally, he is able to write his first and last name, color within a half-inch border, cut along a curved line, draw a person with six body parts, and copy a short sentence from the board. Formal assessment shows that his visual-motor integration falls within the average range and his motor coordination in the above-average range. Additionally, his classroom teacher reported that his sensory processing is within typical ranges across all areas. At this time, there are no motor or sensory concerns that significantly impact his ability to access the general education curriculum.",
+          ],
         },
       ],
-      examples: [
-        "Summary: The evaluation results indicate that [STUDENT] demonstrates age- and grade-level motor skills that support his access to the school curriculum. His fine motor, gross motor and sensory processing skills do not significantly limit his academic success. Functionally, he is able to write his first and last name, color within a half-inch border, cut along a curved line, draw a person with six body parts, and copy a short sentence from the board. Formal assessment shows that his visual-motor integration falls within the average range and his motor coordination in the above-average range. Additionally, his classroom teacher reported that his sensory processing is within typical ranges across all areas. At this time, there are no motor or sensory concerns that significantly impact his ability to access the general education curriculum.",
-      ],
+      examples: [],
       notesHint: "The main findings from each assessment, in a few lines.",
     };
   }
@@ -194,6 +198,11 @@ function summarySection(setup: ReportSetup, o?: TemplateOverrides): ReportSectio
     kind: "para", id: "fine-motor",
     label: "Fine Motor",
     text: "Based on the results of the [[assessments used]], {{student}} demonstrates [[fine motor and visual-motor findings]] that [[impact on access to education]]. Specifically, {{they}} demonstrates difficulty with [[areas of difficulty]]. These challenges [[impact on classroom participation]].",
+    examples: [
+      "Fine Motor: Based on the results of the informal fine motor screening, [STUDENT] demonstrates fine motor and visual-motor delays that impact her ability to complete written work and craft activities with her class. Specifically, she demonstrates difficulty with letter sizing, spacing between words, cutting curved lines, and turning the paper with her helper hand. She tires after a few lines of writing and asks to stop. These challenges impact her classroom participation, as she finishes fewer written responses than her peers and avoids art activities that involve scissors.",
+      "Sensory: Based on the results of the Sensory Processing Measure-2 School Form and teacher report, her sensorimotor skills are affected with Severe Difficulties for Hearing and Body Awareness and Moderate Difficulties for Touch and Social Participation. Within the classroom environment, she covers her ears during noisy transitions and stands too close to classmates in line. She would benefit from sensory supports to stay regulated during transitions and group work.",
+      "Summary: Overall, she demonstrates steady self-regulation, willing participation in class, and functional typing skills for longer written work. She showed improvement in letter sizing during handwriting, though legibility is still affected by uneven spacing between words. Continued access to a laptop for assignments longer than a paragraph is recommended, alongside motor supports including paper with a highlighted writing zone, a slant board, and a short finger warm-up before writing tasks.",
+    ],
   });
   if (setup.assessments.spm2 || setup.assessments.teacher) {
     blocks.push({
@@ -206,11 +215,7 @@ function summarySection(setup: ReportSetup, o?: TemplateOverrides): ReportSectio
     id: "summary",
     title: "Evaluation Summary",
     blocks,
-    examples: [
-      "Fine Motor: Based on the results of the informal fine motor screening, [STUDENT] demonstrates fine motor and visual-motor delays that impact her ability to complete written work and craft activities with her class. Specifically, she demonstrates difficulty with letter sizing, spacing between words, cutting curved lines, and turning the paper with her helper hand. She tires after a few lines of writing and asks to stop. These challenges impact her classroom participation, as she finishes fewer written responses than her peers and avoids art activities that involve scissors.",
-      "Sensory: Based on the results of the Sensory Processing Measure-2 School Form and teacher report, her sensorimotor skills are affected with Severe Difficulties for Hearing and Body Awareness and Moderate Difficulties for Touch and Social Participation. Within the classroom environment, she covers her ears during noisy transitions and stands too close to classmates in line. She would benefit from sensory supports to stay regulated during transitions and group work.",
-      "Summary: Overall, she demonstrates steady self-regulation, willing participation in class, and functional typing skills for longer written work. She showed improvement in letter sizing during handwriting, though legibility is still affected by uneven spacing between words. Continued access to a laptop for assignments longer than a paragraph is recommended, alongside motor supports including paper with a highlighted writing zone, a slant board, and a short finger warm-up before writing tasks.",
-    ],
+    examples: [],
     notesHint: "The main findings from each assessment and how they affect the student in class, in a few lines.",
   };
 }
@@ -351,7 +356,9 @@ export function otReportSections(setup: ReportSetup, o?: TemplateOverrides): Rep
     setup.reportType === "annual"
       ? annualSections(setup, o)
       : [...assessmentSections(setup, o), summarySection(setup, o), ...(setup.concerns ? concernSections(setup) : [])];
-  return applyBlockOverrides(built, o);
+  // A section with no samples of its own uses its paragraphs' samples, after the writer's edits to each one. The screen's,
+  // the teacher checklist's and the summary's samples live on their paragraphs, so each version of those sections keeps its own.
+  return applyBlockOverrides(built, o).map((s) => (s.examples.length ? s : { ...s, examples: s.blocks.flatMap((b) => b.examples ?? []) }));
 }
 
 export const OT_REPORT_TITLE: Record<ReportSetup["reportType"], string> = {
