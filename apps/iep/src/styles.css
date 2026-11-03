@@ -381,7 +381,7 @@ mark.blank { background: #fff1a8; color: inherit; border-radius: 3px; padding: 0
 /* account */
 .account-btn { display: inline-flex; align-items: center; gap: 0.4rem; max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
-.account-dot[data-state="saved"], .account-dot[data-state="idle"] { background: var(--ok, #2f855a); }
+.account-dot[data-state="saved"], .account-dot[data-state="matched"], .account-dot[data-state="idle"] { background: var(--ok, #2f855a); }
 .account-dot[data-state="syncing"] { background: var(--accent); }
 .account-dot[data-state="blocked"], .account-dot[data-state="conflict"], .account-dot[data-state="error"] { background: var(--warn); }
 .account-modal { width: min(100%, 480px); }

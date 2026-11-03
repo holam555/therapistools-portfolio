@@ -25,6 +25,8 @@ export function SyncStatus({ sync, long = false }: { sync: SyncState; long?: boo
       return null;
     case "syncing":
       return <span className="hint">Checking your account…</span>;
+    case "matched":
+      return <span className="hint">Your account holds the same template as this browser (checked {timeOf(sync.at)}).</span>;
     case "saved":
       return (
         <span className="sync-status">

@@ -31,6 +31,8 @@ export type SyncState =
   | { kind: "idle" }
   | { kind: "syncing" }
   | { kind: "saved"; at: Date; names: PrivacyWarning[] }
+  /** Checked, and the account already holds this browser's template. */
+  | { kind: "matched"; at: Date }
   | { kind: "blocked"; warnings: PrivacyWarning[] }
   | { kind: "conflict" }
   | { kind: "error"; message: string };
@@ -149,7 +151,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           // A block or the newest save is what the writer should see.
           if (r && (r.kind === "blocked" || !result || result.kind !== "blocked")) result = r;
         }
-        setSync(result ?? { kind: "idle" });
+        setSync(result ?? { kind: "matched", at: new Date() });
       } catch (err) {
         setSync(reachError(err));
       }
@@ -190,7 +192,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         }
         if (changedHere) setTemplateEpoch((n) => n + 1);
         setConflicts(clashes);
-        setSync(clashes.length ? { kind: "conflict" } : (result ?? { kind: "idle" }));
+        setSync(clashes.length ? { kind: "conflict" } : (result ?? { kind: "matched", at: new Date() }));
       } catch (err) {
         setSync(reachError(err));
       }
@@ -240,7 +242,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             if (r && (r.kind === "blocked" || !result || result.kind !== "blocked")) result = r;
           }
           setConflicts([]);
-          setSync(result ?? { kind: "idle" });
+          setSync(result ?? { kind: "matched", at: new Date() });
         }
       } catch (err) {
         setSync(reachError(err));
