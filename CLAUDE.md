@@ -58,50 +58,39 @@ also has its own docs; read them before changing that app.
 
 The Report tab (`apps/iep/src/report/`) is the main IEP flow: setup, a Word
 draft with fixed wording, openers and yellow [[blanks]], and one AI prompt per
-section. Content lives in `ot-pack.ts` and `ot-screen.ts` (the fine motor
-screen is the only part that changes with grade: K–1, 2–5, 6–8; 9–12 borrows
-6–8). Its wording is a generic sample (rewritten 2026-11-03); the owner's own
-wording lives only in their template edits, backup file and account, so never
-paste real report text into the code, and every sample sentence and test
-fixture is fictional (rule 4). `report/freeze.ts` runs once per browser: a
-browser that used the tool before the rewrite keeps its wording as its own
-edits. Keep the structure and block ids, use {{student}} once per section
-then pronoun tokens, and never add a real name. Blanks can name a dropdown list as
-`[[label::list]]` (lists in `options.ts`); others offer sample sentences from
-the block's examples (`samples.ts`). Ratings use one model, the rating grid
-(`grids.ts`: groups of items × levels, a sentence pattern per level with
-`{items}`, `{Items}`, `{was}`); SPM-2 (`spm.ts`, one line per level) is the
-built-in grid, and ratings are stored as "group.row". The owner removed the
-self-care checklist from the OT template on 2026-10-27; don't add it back. Filled values are keyed
-"section/block/n", so every block has a permanent `id`. Writers can edit the
-template in the tool (Edit template): wording, labels, sample sentences,
-dropdown lists, hidden paragraphs, section titles, their own screen items, and
-each grid's items, levels and sentences. Edits live in `easyiep.template`
-(`report/overrides.ts`), are laid over the built-in pack, travel in the backup
-file, and never change the code. Lines marked `generated` are written from
-setup choices: those with a `grid` open that grid's editor, the goal frame
-isn't editable.
-
-Other disciplines use a **template pack** (`report/pack.ts`): the same report
-as plain data (assessments with optional grids, sections and paragraphs with
-`when` conditions on report type, concerns, grade, service type, teacher
-areas, standards and assessments done; paragraphs can be tick boxes
-(`optional`, ticks in `setup.screenItems`), repeat per objective, and carry
-`{count}` and `{summary:<grid>}` slots), started blank, from a pre-made
-sample, or built from the writer's own document. `packFromOt(label, edits)`
-turns the OT template with a writer's edits into such a pack that reads
-identically (parity test over every setup); `report/adopt.ts` does that once
-per browser that has OT edits, after which OT uses the pack builder too. The writer owns the pack, so edits
-change it directly, with no overrides layer. `ui/ReportOutput.tsx` is the
-preview, prompts and Word download shared by both builders. "Build from my
-document" is plain rules, no AI: `report/docx-read.ts` reads a .docx in the
-browser (jszip + DOMParser) or pasted text; `report/import-doc.ts` drafts
-sections, assessments, grids, blanks, dropdowns and hints, and leaves
-identifying lines out; `ui/ImportDocument.tsx` is the review screen. Every
-other discipline also offers a pre-made generic pack (`report/premade/`),
-written fresh rather than copied from OT, as the owner decided; `packFromOt`
-stays for a parity test. Library, Import, Builder and Output still exist and
-are due to retire.
+section. Every discipline's template is a **template pack** (`report/pack.ts`):
+the report as plain data (assessments with optional rating grids, sections and
+paragraphs with `when` conditions on report type, concerns, grade, service
+type, teacher areas, standards and assessments done; paragraphs can be tick
+boxes (`optional`, ticks in `setup.screenItems`), repeat per objective, and
+carry `{count}` and `{summary:<grid>}` slots), saved under
+`easyiep.pack.<discipline>`. A writer starts one from the pre-made sample
+(`report/premade/`, one per discipline, OT included since 2026-11-03), blank,
+or from their own document, and owns it: edits change the pack directly and
+travel in the backup file and the account. There is no built-in template in
+the code any more: the OT code template, its overrides layer, freeze and
+adoption retired on 2026-11-03 (git history has them); the owner's own
+wording lives only in their browser, backup file and account, so never paste
+real report text into the code, and every sample sentence and test fixture is
+fictional (rule 4). The pre-made OT pack keeps the usual section headings but
+its content is its own; the owner asked that it not mirror their district
+form. Use {{student}} once per section then pronoun tokens, never a real name.
+Blanks can name a dropdown list as `[[label::list]]` (shared lists in
+`options.ts`, copied into each pack); others offer sample sentences from the
+block's or section's examples (`samples.ts`). Ratings use one model, the
+rating grid (`grids.ts`: groups of items × levels, a sentence pattern per level
+with `{items}`, `{Items}`, `{was}`), and ratings are stored as "group.row".
+The owner removed the self-care checklist from the OT template on 2026-10-27;
+don't add it back. Filled values are keyed "section/block/n", so every block
+has a permanent `id`. Lines marked `generated` are written from setup choices:
+those with a `grid` open that grid's editor, those with a `pattern` are edited
+as the pattern. `ui/ReportBuilder.tsx` is the builder, `ui/ReportOutput.tsx`
+the preview, prompts and Word download. "Build from my document" is plain
+rules, no AI: `report/docx-read.ts` reads a .docx in the browser (jszip +
+DOMParser) or pasted text; `report/import-doc.ts` drafts sections,
+assessments, grids, blanks, dropdowns and hints, and leaves identifying lines
+out; `ui/ImportDocument.tsx` is the review screen. Library, Import, Builder
+and Output still exist and are due to retire.
 
 ## Definition of done
 
@@ -112,8 +101,7 @@ the changed tool works in `npm run preview`. Pushing to `main` publishes it.
 
 - Worksheets still load fonts from Google Fonts (disclosed on the privacy page).
   Moving them to `shared/fonts` needs print QA of every template first.
-- IEP Writer: let other disciplines build a report template from scratch or
-  from a copy of OT's; then retire Library, Import, Builder and Output.
+- IEP Writer: retire Library, Import, Builder and Output.
 - IEP Writer accounts went live on 2026-11-03 (docs/ACCOUNTS.md). The
   owner's own wording is in their account; the code holds a generic sample.
 - Cloudflare Web Analytics is still switched on in the Cloudflare dashboard

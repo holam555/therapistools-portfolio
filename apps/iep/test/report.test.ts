@@ -1,146 +1,170 @@
 import { describe, expect, it } from "vitest";
-import { otReportSections, OT_REPORT_TITLE } from "../src/report/ot-pack";
-import { screenItemsFor } from "../src/report/ot-screen";
-import { blanksIn, fillPattern, renderSection, sectionText } from "../src/report/render";
+import { starterLibrary } from "../src/model/defaults";
+import { cloneGrid, groupSentences, normalizeGrid, ratingKey, type GridDef } from "../src/report/grids";
+import { joinList, parseBlank } from "../src/report/options";
+import { packGrids, packSections, type TemplatePack } from "../src/report/pack";
+import { premadePack } from "../src/report/premade";
+import { scanReportText } from "../src/report/privacy-words";
+import { blanksIn, fillPattern, fromEditable, renderSection, sectionText, toEditable } from "../src/report/render";
 import { buildReportDocx, reportDocxBuffer } from "../src/report/report-docx";
 import { buildSectionPrompt, needsPrompt } from "../src/report/report-prompt";
-import { defaultSetup, withGrade } from "../src/report/setup";
-import { GRADE_GROUPS, type ReportSetup } from "../src/report/types";
-import { SPM_GRID, SPM_SCALES, spmKey, spmSummaryPhrase, type SpmResult } from "../src/report/spm";
-import { cloneGrid, groupSentences, normalizeGrid, type GridDef } from "../src/report/grids";
-import { joinList, parseBlank } from "../src/report/options";
 import { fitToBlank, sampleSentences } from "../src/report/samples";
+import { defaultSetup, migrateSpmKeys, migrateValueKeys } from "../src/report/setup";
+import type { ReportSetup } from "../src/report/types";
 
-/** Every combination of the choices that change which sections and wording appear. */
-function allSetups(): ReportSetup[] {
-  const out: ReportSetup[] = [];
-  for (const g of GRADE_GROUPS)
-    for (const reportType of ["evaluation", "annual"] as const)
-      for (const concerns of [true, false])
-        for (const teacherAreas of [{ fine: true, gross: true, sensory: true }, { fine: false, gross: true, sensory: false }, { fine: false, gross: false, sensory: false }])
-          for (const serviceType of ["direct", "indirect"] as const)
-            for (const pronoun of ["he", "she"] as const) out.push({ ...withGrade(defaultSetup(), g.id), reportType, concerns, teacherAreas, serviceType, pronoun });
-  return out;
-}
+// The ready-made OT template, as a report. The generic checks every ready-made
+// pack must pass are in premade.test.ts; these pin what the OT pack does with
+// the setup choices: assessments done, tick boxes, ratings, services, objectives.
 
-const PRONOUN = /\b(he|him|his|she|her|hers|himself|herself)\b/i;
+const pack = premadePack("ot");
+const SPM_SCALES = ["Social Participation", "Vision", "Hearing", "Touch", "Taste and Smell", "Body Awareness", "Balance and Motion", "Planning and Ideas", "Sensory Total"];
+const spmKey = (scale: string) => ratingKey("scales", scale);
+/** A setup with every tick box for the grade ticked, as the builder does when a template is chosen. */
+const allTicked = (grade: ReportSetup["grade"] = "g25"): ReportSetup => {
+  const s = { ...defaultSetup(), grade };
+  const screen = pack.assessments.find((a) => a.id === "screen")!;
+  const ids = screen.sections.filter((x) => x.when?.grades?.includes(grade)).flatMap((x) => x.blocks.flatMap((b) => (b.kind !== "grid" && b.optional && b.id ? [b.id] : [])));
+  return { ...s, screenItems: ids };
+};
+const sections = (p: Partial<ReportSetup> = {}) => packSections(pack, { ...allTicked(), ...p });
+const find = (id: string, p: Partial<ReportSetup> = {}) => sections(p).find((s) => s.id === id)!;
 
 describe("OT report template", () => {
-  it("renders every section with no leftover marks, placeholders or real names", () => {
-    for (const setup of allSetups())
-      for (const s of otReportSections(setup)) {
-        const text = sectionText(s, setup.pronoun);
-        expect(text, s.id).not.toMatch(/\{\{|\}\}/);
-        expect(text, s.id).not.toMatch(/\bXX+\b/);
-        for (const e of s.examples) expect(e, s.id).not.toMatch(/\bXX+\b|\{\{/);
-      }
+  it("builds the right sections for each report", () => {
+    const ids = (p: Partial<ReportSetup>) => sections(p).map((s) => s.id);
+    expect(ids({ reportType: "evaluation" })).toEqual(["teacher", "screen-g25", "beery", "spm2", "summary", "next-steps", "impact", "service", "goal"]);
+    expect(ids({ reportType: "evaluation", concerns: false })).toEqual(["teacher", "screen-g25", "beery", "spm2", "summary-none"]);
+    expect(ids({ reportType: "annual", concerns: true })).toEqual(["present-levels", "teacher", "screen-g25", "beery", "spm2", "next-steps", "impact", "service", "goal"]);
+    expect(ids({ reportType: "annual", concerns: false })).toEqual(["present-levels", "teacher", "screen-g25", "beery", "spm2", "ending"]);
+    expect(ids({ reportType: "evaluation", concerns: false, assessments: { teacher: false, beery: false, spm2: false } })).toEqual(["screen-g25", "summary-none"]);
+    expect(ids({ grade: "k1" })).toContain("screen-k1");
+    expect(ids({ grade: "g68" })).toContain("screen-older");
+    expect(ids({ grade: "g912" })).toContain("screen-older");
   });
 
-  it("writes [STUDENT] once, at the start of each section, then pronouns", () => {
-    for (const setup of allSetups())
-      for (const s of otReportSections(setup)) {
-        const text = sectionText(s, setup.pronoun).replace(/^[^\n]*\n/, ""); // drop the title line
-        const count = (text.match(/\[STUDENT\]/g) ?? []).length;
-        expect(count, `${s.id} uses [STUDENT] ${count} times`).toBeLessThanOrEqual(1);
-        const pronounAt = text.search(PRONOUN);
-        if (pronounAt >= 0 && s.id !== "spm2") {
-          // SPM-2 scale definitions talk about "the child" in general, not this student.
-          expect(text.indexOf("[STUDENT]"), `${s.id}: pronoun before [STUDENT]`).toBeGreaterThanOrEqual(0);
-          expect(text.indexOf("[STUDENT]"), `${s.id}: pronoun before [STUDENT]`).toBeLessThan(pronounAt);
-        }
-      }
+  it("keeps the section headings a school OT report carries", () => {
+    const titles = sections({ reportType: "annual" }).map((s) => s.title);
+    expect(titles).toEqual([
+      "Present Level of Performance",
+      "Teacher Rating Checklist",
+      "Informal Fine Motor Screen",
+      "Beery-Buktenica Developmental Test of Visual-Motor Integration",
+      "Sensory Processing Measure-2: Child School Form",
+      "Next Steps",
+      "Impact of Disability Statement",
+      "Service Delivery Statement",
+      "Motor Goal",
+    ]);
+    expect(find("summary").title).toBe("Evaluation Summary");
+    expect(find("summary-none", { concerns: false }).title).toBe("Evaluation Summary");
+    expect(find("ending", { reportType: "annual", concerns: false }).title).toBe("Ending");
   });
 
-  it("fills pronouns for she", () => {
-    const setup = { ...defaultSetup(), pronoun: "she" as const };
-    const screen = otReportSections(setup).find((s) => s.id === "screen")!;
-    const text = sectionText(screen, "she");
-    expect(text).toContain("She uses a [[grasp type]] pencil grasp.");
+  it("fills pronouns for she and leaves no list names in the text", () => {
+    const text = sectionText(find("screen-g25", { pronoun: "she" }), "she");
+    expect(text).toContain("She used a [[grasp type]] grasp with her [[handedness]] hand");
     expect(text).not.toContain("::");
     expect(text).not.toMatch(/\b(he|his|him)\b/);
   });
 
-  it("shows the fine motor screen items for the chosen grade; 9–12 borrows 6–8", () => {
-    const ids = (g: Parameters<typeof screenItemsFor>[0]) => screenItemsFor(g).map((i) => i.id);
-    expect(ids("k1")).toContain("k1-design");
-    expect(ids("g25")).toContain("g25-alphabet");
-    expect(ids("g68")).toEqual(["g68-typing", "g68-handwriting", "g68-sensory"]);
-    expect(ids("g912")).toEqual(ids("g68"));
-    const k1 = withGrade(defaultSetup(), "k1");
+  it("shows only the ticked screen items and drops a subheading whose items are all unticked", () => {
+    const k1 = allTicked("k1");
     expect(k1.screenItems.every((id) => id.startsWith("k1-"))).toBe(true);
-    const screen = otReportSections({ ...k1, screenItems: ["k1-grasp", "k1-tone"] }).find((s) => s.id === "screen")!;
-    const text = sectionText(screen, "he");
-    expect(text).toContain("Classroom Skills");
-    expect(text).toContain("- Pencil grasp – He is [[handedness]] and uses a [[grasp type]] grasp");
-    expect(text).toContain("Supporting Skills");
-    expect(text).not.toContain("Design copy");
-    expect(screen.examples.length).toBe(2);
+    const text = sectionText(packSections(pack, { ...k1, screenItems: ["k1-name", "k1-fasteners"] }).find((s) => s.id === "screen-k1")!, "he");
+    expect(text).toContain("Writing and drawing");
+    expect(text).toContain("- Name writing – He wrote his first name [[from memory or from a model]]");
+    expect(text).toContain("Hands and posture");
+    expect(text).toContain("- Fasteners – He [[managed or needed help with]] a zipper");
+    expect(text).not.toContain("Scissors and tools");
+    expect(text).not.toContain("Prewriting strokes");
+    expect(sectionText(packSections(pack, { ...k1, screenItems: [] }).find((s) => s.id === "screen-k1")!, "he")).not.toContain("–");
   });
 
   it("does not change other assessments with grade", () => {
-    const strip = (s: ReportSetup) => otReportSections(s).filter((x) => x.id !== "screen").map((x) => sectionText(x, "he"));
-    expect(strip(withGrade(defaultSetup(), "k1"))).toEqual(strip(withGrade(defaultSetup(), "g68")));
-  });
-
-  it("builds the right sections for each report", () => {
-    const ids = (p: Partial<ReportSetup>) => otReportSections({ ...defaultSetup(), ...p }).map((s) => s.id);
-    expect(ids({ reportType: "evaluation" })).toEqual(["teacher", "screen", "beery", "spm2", "summary", "next-steps", "impact", "service", "goal"]);
-    expect(ids({ reportType: "evaluation", concerns: false })).toEqual(["teacher", "screen", "beery", "spm2", "summary"]);
-    expect(ids({ reportType: "annual", concerns: true })).toEqual(["plop-header", "teacher", "screen", "beery", "spm2", "next-steps", "impact", "service", "goal"]);
-    expect(ids({ reportType: "annual", concerns: false })).toEqual(["plop-header", "teacher", "screen", "beery", "spm2", "ending"]);
-    expect(ids({ reportType: "evaluation", concerns: false, assessments: { teacher: false, screen: true, beery: false, spm2: false } })).toEqual(["screen", "summary"]);
-    const header = otReportSections({ ...defaultSetup(), reportType: "annual" })[0];
-    expect(sectionText(header, "he")).toContain("[[Paste the record review and progress toward goals from last year's review, then update it]]");
+    const strip = (g: ReportSetup["grade"]) => packSections(pack, allTicked(g)).filter((x) => !x.id.startsWith("screen")).map((x) => sectionText(x, "he"));
+    expect(strip("k1")).toEqual(strip("g68"));
   });
 
   it("lists the chosen number of objectives and standards under the goal", () => {
-    const goal = otReportSections({ ...defaultSetup(), reportType: "annual", objectives: 4, goalAreas: ["selfcare"] }).find((s) => s.id === "goal")!;
+    const goal = find("goal", { reportType: "annual", objectives: 4, goalAreas: ["selfcare"] });
     expect(goal.blocks.filter((b) => b.kind === "numbered").length).toBe(4);
     const text = sectionText(goal, "she");
-    expect(text).toContain("[[the self-care or life-skills standard this goal supports]]");
-    expect(text).not.toContain("handwriting or written-expression");
-  });
-
-  it("writes the teacher checklist one area at a time", () => {
-    const text = (areas: ReportSetup["teacherAreas"]) => sectionText(otReportSections({ ...defaultSetup(), teacherAreas: areas }).find((s) => s.id === "teacher")!, "she");
-    const sensoryOnly = text({ fine: false, gross: false, sensory: true });
-    expect(sensoryOnly).toContain("[STUDENT] demonstrates fine motor skills within age and grade expectations");
-    expect(sensoryOnly).toContain("Gross motor skills are within expectations for moving around the school");
-    expect(sensoryOnly).toContain("noting that she [[sensory behaviors the teacher noted]]");
-    expect(sensoryOnly).toContain("accommodations such as [[accommodations in use]] are in place.");
-    const grossOnly = text({ fine: false, gross: true, sensory: false });
-    expect(grossOnly).toContain("Gross motor concerns were also reported: she [[gross motor difficulties and how often]]");
-    expect(grossOnly).toContain("No sensory concerns that interfere");
-    expect(grossOnly).not.toContain("[[fine motor difficulties and how often]]");
-    const none = text({ fine: false, gross: false, sensory: false });
-    expect(none).toContain("The teacher rating checklist indicates that");
-    expect(none).not.toContain("accommodations");
+    expect(text).toContain("by meeting the 4 objectives below.");
+    expect(text).toContain("4. She will [[the step toward the goal]] in [[percent]]% of opportunities.");
+    expect(text).toContain("Independence: [[the life-skills or health standard this goal supports, with its code]]");
+    expect(text).not.toContain("Writing:");
+    expect(goal.blocks[0]).toMatchObject({ generated: true, slots: { count: "4" } });
+    expect(sectionText(find("goal", { goalAreas: [] }), "he")).not.toContain("Related Standards");
   });
 
   it("writes a direct or an indirect service statement for any report with concerns", () => {
-    const service = (p: Partial<ReportSetup>) => sectionText(otReportSections({ ...defaultSetup(), ...p }).find((s) => s.id === "service")!, "he");
-    expect(service({ reportType: "evaluation" })).toContain("[[minutes and frequency]] of occupational therapy will be provided [[inside or outside the classroom]]");
-    expect(service({ reportType: "annual", serviceType: "indirect" })).toContain("[STUDENT] will receive [[minutes and frequency]] of indirect occupational therapy services to support [[skill areas]]. These services consist of consulting with his special education team");
-    expect(otReportSections({ ...defaultSetup(), reportType: "evaluation", concerns: false }).some((s) => s.id === "service")).toBe(false);
+    const service = (p: Partial<ReportSetup>) => sectionText(find("service", p), "he");
+    expect(service({ reportType: "evaluation" })).toContain("Services will be direct: the occupational therapist will work with him on [[what the sessions will target]]");
+    expect(service({ reportType: "evaluation" })).not.toContain("indirect");
+    expect(service({ reportType: "annual", serviceType: "indirect" })).toContain("Services will be indirect: the occupational therapist will consult with his teachers and family");
+    expect(sections({ reportType: "evaluation", concerns: false }).some((s) => s.id === "service")).toBe(false);
+  });
+
+  it("writes the teacher checklist from the ratings and feeds the summary", () => {
+    const grid = packGrids(pack).teacher;
+    const ratings: Record<string, string> = {};
+    for (const g of grid.groups) for (const r of g.rows) ratings[ratingKey(g.id, r.id)] = "typical";
+    ratings["written.letters"] = "often";
+    ratings["written.copying"] = "some";
+    ratings["tools.keyboard"] = "na";
+    const text = sectionText(find("teacher", { ratings: { teacher: ratings } }), "he");
+    expect(text).toContain("Written work: Sizing and spacing, finishing written work in the time given, and pencil pressure and grip were rated as typical for the class. Difficulty with copying from the board or a book was noted some of the time. Forming letters and numbers was rated as a frequent difficulty.");
+    expect(text).toContain("Classroom tools: Using scissors, coloring and drawing, gluing and folding, and using a ruler were rated as typical for the class.");
+    expect(text).not.toContain("keyboard and mouse use");
+    const summary = sectionText(find("summary", { ratings: { teacher: ratings } }), "he");
+    expect(summary).toContain("On the teacher checklist, his classroom performance was affected with Frequent difficulty for forming letters and numbers and Some difficulty for copying from the board or a book.");
+    expect(sectionText(find("teacher"), "he")).toContain("Written work: [[ratings for this group]]");
+    expect(sectionText(find("summary", { assessments: { teacher: false } }), "he")).not.toContain("On the teacher checklist");
   });
 
   it("keeps the summary's no-concerns and with-concerns versions apart", () => {
-    const none = sectionText(otReportSections({ ...defaultSetup(), concerns: false }).find((s) => s.id === "summary")!, "he");
-    expect(none).toContain("there are no motor or sensory concerns");
-    const some = sectionText(otReportSections({ ...defaultSetup(), concerns: true }).find((s) => s.id === "summary")!, "he");
-    expect(some).toContain("Fine Motor:");
-      });
+    const none = sectionText(find("summary-none", { concerns: false }), "he");
+    expect(none).toContain("within the range expected for his age and grade");
+    expect(none).toContain("Occupational therapy is not recommended at this time.");
+    const some = sectionText(find("summary"), "he");
+    expect(some).toContain("[STUDENT] has difficulty with [[areas of need]]");
+    expect(some).toContain("Strengths include");
+  });
+});
+
+describe("SPM-2 scales", () => {
+  const all = (r: string) => Object.fromEntries(SPM_SCALES.map((s) => [spmKey(s), r]));
+  it("fills the result lines once every scale is set, and feeds the summary", () => {
+    const spm = { ...all("typical"), [spmKey("Vision")]: "severe", [spmKey("Touch")]: "severe", [spmKey("Planning and Ideas")]: "moderate" };
+    const text = sectionText(find("spm2", { ratings: { spm2: spm } }), "he");
+    expect(text).toContain("Typical Processing: Social Participation, Hearing, Taste and Smell, Body Awareness, Balance and Motion, and Sensory Total");
+    expect(text).toContain("Moderate Difficulties: Planning and Ideas");
+    expect(text).toContain("Severe Difficulties: Vision and Touch");
+    const summary = sectionText(find("summary", { ratings: { spm2: spm } }), "he");
+    expect(summary).toContain("On the SPM-2, his sensory processing at school was affected with Severe Difficulties for Vision and Touch and Moderate Difficulties for Planning and Ideas.");
+    expect(sectionText(find("summary", { ratings: { spm2: all("typical") } }), "he")).toContain("was within the typical range on every scale.");
+    expect(sectionText(find("summary", { assessments: { spm2: false } }), "he")).not.toContain("On the SPM-2");
+  });
+
+  it("keeps blanks until every scale is set", () => {
+    const text = sectionText(find("spm2", { ratings: { spm2: { [spmKey("Vision")]: "severe" } } }), "he");
+    expect(text).toContain("Severe Difficulties: [[scales in this range, or none]]");
+    expect(sectionText(find("summary", { ratings: { spm2: { [spmKey("Vision")]: "severe" } } }), "he")).toContain("was [[results by scale]].");
+  });
+
+  it("moves results saved under the scale name alone to the grid key", () => {
+    expect(migrateSpmKeys({ Vision: "severe", "scales.Touch": "typical" })).toEqual({ "scales.Vision": "severe", "scales.Touch": "typical" });
+  });
 });
 
 describe("Word draft", () => {
   it("contains the report with yellow blanks and no template marks", async () => {
-    const setup = { ...defaultSetup(), reportType: "annual" as const, concerns: true };
-    const buf = await reportDocxBuffer(buildReportDocx(OT_REPORT_TITLE.annual, otReportSections(setup), "he"));
+    const buf = await reportDocxBuffer(buildReportDocx(pack.titles.annual, sections({ reportType: "annual", concerns: true }), "he"));
     const { default: JSZip } = await import("jszip");
     const xml = await (await JSZip.loadAsync(buf)).file("word/document.xml")!.async("string");
     expect(xml).toContain("Occupational Therapy Annual Review");
     expect(xml).toContain("Impact of Disability Statement");
-    expect(xml).toContain("School-based occupational therapy is a related service.");
+    expect(xml).toContain("School-based occupational therapy supports a student");
     expect(xml).toMatch(/<w:highlight w:val="yellow"\/>/);
     expect(xml).toContain("[STUDENT]");
     expect(xml).not.toMatch(/\{\{|\}\}/);
@@ -148,24 +172,24 @@ describe("Word draft", () => {
 });
 
 describe("section prompts", () => {
-  const setup = { ...defaultSetup(), pronoun: "she" as const };
-  const sections = otReportSections(setup);
+  const setup = { ...allTicked(), pronoun: "she" as const };
+  const built = packSections(pack, setup);
   const ctx = { role: "occupational therapist", reportType: setup.reportType, grade: setup.grade, pronoun: setup.pronoun };
 
-  it("only offers prompts for sections with blanks to fill", () => {
-    const withPrompts = sections.filter((s) => needsPrompt(s, "she")).map((s) => s.id);
-    expect(withPrompts).toEqual(["teacher", "screen", "summary", "next-steps", "impact", "service", "goal"]);
-    expect(blanksIn(sections.find((s) => s.id === "beery")!, "she").length).toBeGreaterThan(0);
+  it("offers prompts for every section with blanks to fill", () => {
+    const withPrompts = built.filter((s) => needsPrompt(s, "she")).map((s) => s.id);
+    expect(withPrompts).toEqual(["teacher", "screen-g25", "beery", "spm2", "summary", "next-steps", "impact", "service", "goal"]);
+    expect(blanksIn(built.find((s) => s.id === "beery")!, "she").length).toBeGreaterThan(0);
   });
 
   it("carries the frame, examples, rules, role and a place for notes", () => {
-    const p = buildSectionPrompt(sections.find((s) => s.id === "screen")!, ctx);
+    const p = buildSectionPrompt(built.find((s) => s.id === "screen-g25")!, ctx);
     expect(p).toContain("school-based occupational therapist write one section of a student's IEP evaluation report");
     expect(p).toContain("grade 2–5");
     expect(p).toContain("=== FRAME ===\nINFORMAL FINE MOTOR SCREEN");
-    expect(p).toContain("- Pencil grasp – She uses a [[grasp type]] pencil grasp.");
+    expect(p).toContain("- Grasp and pressure – She used a [[grasp type]] grasp with her [[handedness]] hand");
     expect(p).toContain("=== EXAMPLES (for style and tone only; never copy their details) ===");
-    expect(p).toContain("Copy alphabet & numbers – He copied the numbers 1 to 10 legibly with the 6 and the 9 reversed.");
+    expect(p).toContain("She used a thumb wrap grasp with her left hand and pressed too hard.");
     expect(p).toContain("then she, her, hers");
     expect(p).toContain("Never invent scores");
     expect(p).toMatch(/=== MY ROUGH NOTES FOR THIS SECTION \(paste below this line; [^)]+\) ===\n\n\n=== END NOTES ===$/);
@@ -173,12 +197,11 @@ describe("section prompts", () => {
   });
 
   it("renders blank runs separately for highlighting", () => {
-    const runs = renderSection(sections[0], "she")[0].runs;
+    const runs = renderSection(built[0], "she")[0].runs;
     expect(runs.some((r) => r.blank && r.text.startsWith("[["))).toBe(true);
     expect(runs.filter((r) => !r.blank).every((r) => !r.text.includes("[["))).toBe(true);
   });
 });
-
 
 describe("fillable blanks", () => {
   it("reads list names from blanks and joins lists naturally", () => {
@@ -191,13 +214,14 @@ describe("fillable blanks", () => {
   });
 
   it("puts filled values into the text, the Word draft and the prompt", async () => {
-    const setup = { ...defaultSetup(), reportType: "annual" as const, concerns: true };
-    const service = otReportSections(setup).find((s) => s.id === "service")!;
+    const service = find("service", { reportType: "annual", concerns: true });
     const keys = renderSection(service, "he").flatMap((b) => b.runs.filter((r) => r.blank).map((r) => r.blank!));
-    expect(keys.map((k) => k.list)).toEqual(["minutes", "location", "skillAreas"]);
-    const values = { [keys[0].key]: "120 minutes monthly", [keys[1].key]: "outside the classroom", [keys[2].key]: "fine motor skills and sensory processing" };
+    expect(keys.map((k) => k.list)).toEqual(["minutes", "location", "skillAreas", undefined, "accommodations"]);
+    for (const k of keys) expect(pack.lists[k.list ?? "minutes"]).toBeDefined();
+    const values = { [keys[0].key]: "120 minutes monthly", [keys[1].key]: "outside the classroom", [keys[2].key]: "fine motor skills and sensory processing", [keys[3].key]: "letter formation", [keys[4].key]: "a slant board" };
     const text = sectionText(service, "he", values);
-    expect(text).toContain("120 minutes monthly of occupational therapy will be provided outside the classroom to address fine motor skills and sensory processing.");
+    expect(text).toContain("[STUDENT] will receive occupational therapy as a related service for 120 minutes monthly, outside the classroom, to address fine motor skills and sensory processing.");
+    expect(text).toContain("Accommodations include a slant board.");
     expect(blanksIn(service, "he", values)).toEqual([]);
     expect(needsPrompt(service, "he", values)).toBe(false);
     expect(needsPrompt(service, "he")).toBe(true);
@@ -209,48 +233,23 @@ describe("fillable blanks", () => {
   });
 
   it("keeps a filled value attached to its item when other items are unticked", () => {
-    const setup = withGrade(defaultSetup(), "g25");
-    const screen = otReportSections(setup).find((s) => s.id === "screen")!;
+    const setup = allTicked("g25");
+    const screen = packSections(pack, setup).find((s) => s.id === "screen-g25")!;
     const grasp = renderSection(screen, "he").find((b) => b.key === "g25-grasp")!;
     const key = grasp.runs.find((r) => r.blank)!.blank!.key;
     const values = { [key]: "tripod" };
-    const fewer = otReportSections({ ...setup, screenItems: setup.screenItems.filter((id) => id !== "g25-dominance") }).find((s) => s.id === "screen")!;
-    expect(sectionText(fewer, "he", values)).toContain("- Pencil grasp – He uses a tripod pencil grasp.");
+    const fewer = packSections(pack, { ...setup, screenItems: setup.screenItems.filter((id) => id !== "g25-near") }).find((s) => s.id === "screen-g25")!;
+    expect(sectionText(fewer, "he", values)).toContain("- Grasp and pressure – He used a tripod grasp with his [[handedness]] hand");
   });
 
-  it("offers sample sentences from the item's own examples, in the chosen pronoun", () => {
-    const item = screenItemsFor("k1").find((i) => i.id === "k1-grasp")!;
-    const she = sampleSentences(item.examples, "she");
-    expect(she[0]).toBe("She is left handed and holds crayons in a fisted grasp, moving to a tripod grasp when reminded.");
-    expect(she).toContain("She pressed hard enough to tear the paper twice and kept her other hand in her lap instead of holding the page.");
+  it("offers sample sentences from the section's examples, in the chosen pronoun", () => {
+    const screen = find("screen-k1", { grade: "k1" });
+    const she = sampleSentences(screen.examples, "she");
+    expect(she[0]).toBe("An informal fine motor screen was completed with her to see how she manages the hand skills expected in her grade.");
+    expect(she).toContain("She held the crayon with a fisted grasp in her right hand and switched hands twice.");
     expect(she.join(" ")).not.toMatch(/\[STUDENT\]|\bhe\b|\bhis\b/i);
     expect(fitToBlank("He had good use of his stabilizer hand.", true)).toBe("He had good use of his stabilizer hand");
     expect(fitToBlank("He had good use of his stabilizer hand.", false)).toBe("He had good use of his stabilizer hand.");
-  });
-});
-
-describe("SPM-2 scales", () => {
-  const all = (r: SpmResult) => Object.fromEntries(SPM_SCALES.map((s) => [spmKey(s), r])) as Record<string, SpmResult>;
-  it("fills the result lines once every scale is set, and feeds the summary", () => {
-    const spm: Record<string, SpmResult> = { ...all("typical"), [spmKey("Vision")]: "severe", [spmKey("Touch")]: "severe", [spmKey("Planning and Ideas")]: "moderate" };
-    const setup = { ...defaultSetup(), ratings: { spm2: spm } };
-    const text = sectionText(otReportSections(setup).find((s) => s.id === "spm2")!, "he");
-    expect(text).toContain("Typical Processing: Social Participation, Hearing, Taste and Smell, Body Awareness, Balance and Motion, and Sensory Total");
-    expect(text).toContain("Moderate Difficulties: Planning and Ideas");
-    expect(text).toContain("Severe Difficulties: Vision and Touch");
-    const summary = sectionText(otReportSections(setup).find((s) => s.id === "summary")!, "he");
-    expect(summary).toContain("sensory processing skills are affected with Severe Difficulties for Vision and Touch and Moderate Difficulties for Planning and Ideas.");
-    expect(spmSummaryPhrase(all("typical"))).toBe("within the typical range across all areas");
-  });
-
-  it("keeps blanks until every scale is set", () => {
-    const setup = { ...defaultSetup(), ratings: { spm2: { [spmKey("Vision")]: "severe" } } };
-    const text = sectionText(otReportSections(setup).find((s) => s.id === "spm2")!, "he");
-    expect(text).toContain("Severe Difficulties: [[scales at this level, or none]]");
-  });
-
-  it("moves results saved under the scale name alone to the grid key", () => {
-    expect(migrateSpmKeys({ Vision: "severe", "scales.Touch": "typical" })).toEqual({ "scales.Vision": "severe", "scales.Touch": "typical" });
   });
 });
 
@@ -270,41 +269,20 @@ describe("editable rating grids", () => {
     expect(groupSentences(grid, grid.groups[0], {})).toBeNull();
   });
 
-  it("uses renamed SPM-2 levels and scales in the lines, the intro and the summary", () => {
-    const grid = cloneGrid(SPM_GRID);
+  it("uses renamed SPM-2 levels and scales in the lines and the summary", () => {
+    const grid = cloneGrid(packGrids(pack).spm2);
     grid.levels[2].label = "Definite Dysfunction";
     grid.groups[0].rows = [{ id: "Vision", label: "Vision" }, { id: "Touch", label: "Touch" }, { id: "Total", label: "Total", composite: true }];
-    const o = emptyOverrides();
-    o.grids.spm2 = grid;
-    const setup = { ...defaultSetup(), ratings: { spm2: { [spmKey("Vision")]: "severe", [spmKey("Touch")]: "typical", [spmKey("Total")]: "moderate" } } };
-    const sections = otReportSections(setup, o);
-    const text = sectionText(sections.find((s) => s.id === "spm2")!, "he");
-    expect(text).toContain("Scales include: Vision, Touch.");
-    expect(text).toContain("Typical Processing, Moderate Difficulties, or Definite Dysfunction");
+    const edited: TemplatePack = { ...pack, assessments: pack.assessments.map((a) => (a.id === "spm2" ? { ...a, grid } : a)) };
+    const setup = { ...allTicked(), ratings: { spm2: { [spmKey("Vision")]: "severe", [spmKey("Touch")]: "typical", [spmKey("Total")]: "moderate" } } };
+    const built = packSections(edited, setup);
+    const text = sectionText(built.find((s) => s.id === "spm2")!, "he");
     expect(text).toContain("Definite Dysfunction: Vision");
     expect(text).toContain("Moderate Difficulties: Total");
-    expect(sectionText(sections.find((s) => s.id === "summary")!, "he")).toContain("affected with Definite Dysfunction for Vision and Moderate Difficulties for Total.");
-  });
-
-  it("keeps edited grids and titles through storage, dropping broken ones", () => {
-    const grid = cloneGrid(SPM_GRID);
-    grid.groups[0].rows.push({ id: "item1", label: "Smell" });
-    const o = normalizeOverrides({ version: 1, grids: { spm2: grid, madeUp: grid, broken: { levels: [], groups: [] } }, titles: { spm2: " Sensory measure ", teacher: "" } });
-    expect(o.grids.spm2.groups[0].rows.at(-1)).toEqual({ id: "item1", label: "Smell" });
-    expect(o.grids).not.toHaveProperty("madeUp");
-    expect(o.grids).not.toHaveProperty("broken");
-    expect(o.titles).toEqual({ spm2: "Sensory measure" });
-    // an unchanged copy is not an edit
-    expect(normalizeOverrides({ version: 1, grids: { spm2: cloneGrid(SPM_GRID) } }).grids).toEqual({});
-    expect(normalizeGrid({ levels: [{ value: "x" }], groups: [{ id: "g", rows: [{ id: "r" }] }] }, SPM_GRID)).toMatchObject({ levels: [{ value: "x", label: "x", sentence: "" }], groups: [{ id: "g", label: "", rows: [{ id: "r", label: "" }] }] });
-    const sections = otReportSections(defaultSetup(), o);
-    expect(sections.find((s) => s.id === "spm2")!.title).toBe("Sensory measure");
-    expect(sections.find((s) => s.id === "teacher")!.title).toBe("Teacher Rating Checklist");
+    expect(sectionText(built.find((s) => s.id === "summary")!, "he")).toContain("affected with Definite Dysfunction for Vision and Moderate Difficulties for Total.");
+    expect(normalizeGrid({ levels: [{ value: "x" }], groups: [{ id: "g", rows: [{ id: "r" }] }] }, grid)).toMatchObject({ levels: [{ value: "x", label: "x", sentence: "" }], groups: [{ id: "g", label: "", rows: [{ id: "r", label: "" }] }] });
   });
 });
-
-import { applyBlockOverrides, emptyOverrides, fromEditable, listFor, normalizeOverrides, toEditable } from "../src/report/overrides";
-import { migrateSpmKeys, migrateValueKeys } from "../src/report/setup";
 
 describe("template edits", () => {
   it("round-trips wording between template marks and plain he/him/his text", () => {
@@ -317,93 +295,32 @@ describe("template edits", () => {
     expect(sectionText({ id: "x", title: "T", examples: [], blocks: [{ kind: "para", text: edited }] }, "she")).toContain("She holds the paper with her left hand while [[task]].");
   });
 
-  it("lays wording, labels, samples and hidden paragraphs over the template", () => {
-    const setup = withGrade(defaultSetup(), "g25");
-    const o = emptyOverrides();
-    o.blocks["screen/g25-grasp"] = { text: fromEditable("He holds the pencil with a [[grasp type::grasp]] grasp."), label: "Grasp", examples: ["He used a tripod grasp."] };
-    o.blocks["screen/g25-dominance"] = { hidden: true };
-    o.sectionExamples["teacher"] = ["The teacher reported no concerns."];
-    const sections = otReportSections(setup, o);
-    const screen = sections.find((s) => s.id === "screen")!;
-    const text = sectionText(screen, "she");
-    expect(text).toContain("- Grasp – She holds the pencil with a [[grasp type]] grasp.");
-    expect(text).not.toContain("Hand dominance");
-    expect(screen.blocks.find((b) => b.id === "g25-grasp")!.examples).toEqual(["He used a tripod grasp."]);
-    expect(sections.find((s) => s.id === "teacher")!.examples).toEqual(["The teacher reported no concerns."]);
-    // the edited blank keeps its dropdown
-    const run = renderSection(screen, "she").find((b) => b.key === "g25-grasp")!.runs.find((r) => r.blank)!;
-    expect(run.blank!.list).toBe("grasp");
-    // without edits nothing changes
-    expect(applyBlockOverrides(otReportSections(setup), emptyOverrides())).toEqual(otReportSections(setup));
-  });
-
-  it("edits the wording around what the app fills into a generated line", () => {
-    const o = emptyOverrides();
-    o.blocks["summary/sensory"] = { text: "Sensory results from the {assessments}: {results}. {{They}} [[next step]]." };
-    o.blocks["goal/goal-frame"] = { text: "{{student}} will meet [[number met::objectivesMet]] of these {count} objectives:" };
-    const spm = Object.fromEntries(SPM_SCALES.map((s) => [spmKey(s), "typical"]));
-    spm[spmKey("Vision")] = "severe";
-    const sections = otReportSections({ ...defaultSetup(), reportType: "annual", objectives: 4, ratings: { spm2: spm }, pronoun: "she" }, o);
-    expect(sectionText(otReportSections({ ...defaultSetup(), ratings: { spm2: spm }, pronoun: "she" }, o).find((s) => s.id === "summary")!, "she")).toContain(
-      "Sensory: Sensory results from the Sensory Processing Measure-2 School form and teacher report: affected with Severe Difficulties for Vision. She [[next step]].",
-    );
-    const goal = sections.find((s) => s.id === "goal")!;
+  it("keeps the wording around what the app fills into a generated line", () => {
+    const edited: TemplatePack = {
+      ...pack,
+      sections: pack.sections.map((s) =>
+        s.id !== "goal" ? s : { ...s, blocks: s.blocks.map((b) => (b.id === "frame" ? { ...b, text: "{{student}} will meet [[number met::objectivesMet]] of these {count} objectives:" } : b)) },
+      ),
+    };
+    const goal = packSections(edited, { ...allTicked(), reportType: "annual", objectives: 4, pronoun: "she" }).find((s) => s.id === "goal")!;
     expect(sectionText(goal, "she")).toContain("[STUDENT] will meet [[number met]] of these 4 objectives:");
     expect(goal.blocks[0].pattern).toBe("{{student}} will meet [[number met::objectivesMet]] of these {count} objectives:");
-    // the built-in line keeps its pattern and slots, so the editor can show the wording with the slot in place
-    const built = otReportSections({ ...defaultSetup(), reportType: "annual" }).find((s) => s.id === "goal")!.blocks[0];
-    expect(built.pattern).toContain("{count}");
-    expect(built.slots).toEqual({ count: "3" });
+    expect(goal.blocks[0].slots).toEqual({ count: "4" });
     expect(fillPattern("{count} of {unknown}", { count: "2" })).toBe("2 of {unknown}");
   });
 
-  it("keeps teacher-checklist versions apart when one is edited", () => {
-    const o = emptyOverrides();
-    o.blocks["teacher/teacher-concerns"] = { text: "Concerns were reported." };
-    const withConcerns = otReportSections({ ...defaultSetup(), teacherAreas: { fine: true, gross: false, sensory: false } }, o).find((s) => s.id === "teacher")!;
-    const without = otReportSections({ ...defaultSetup(), teacherAreas: { fine: false, gross: false, sensory: false } }, o).find((s) => s.id === "teacher")!;
-    expect(sectionText(withConcerns, "he")).toContain("Concerns were reported.");
-    expect(sectionText(without, "he")).toContain("The teacher rating checklist indicates that");
-  });
-
-  it("adds the writer's own screen items and hides built-in ones per grade", () => {
-    const o = emptyOverrides();
-    o.screen.k1 = { hidden: ["k1-strength"], added: [{ id: "custom-1", label: "Keyboarding", group: "classroom", opener: "{{They}} [[typing]].", examples: [] }] };
-    const setup = withGrade(defaultSetup(), "k1", o);
-    expect(setup.screenItems).toContain("custom-1");
-    expect(setup.screenItems).not.toContain("k1-strength");
-    const text = sectionText(otReportSections(setup, o).find((s) => s.id === "screen")!, "she");
-    expect(text).toContain("- Keyboarding – She [[typing]].");
-    expect(text).not.toContain("Strength –");
-    // other grades are untouched
-    expect(withGrade(defaultSetup(), "g25", o).screenItems.some((id) => id.startsWith("custom"))).toBe(false);
-  });
-
-  it("uses edited dropdown choices and ignores unknown or broken data", () => {
-    const o = normalizeOverrides({ version: 1, lists: { minutes: ["45 minutes monthly"], madeUp: ["x"] }, blocks: { "a/b": { text: 5, hidden: true } }, junk: 1 });
-    expect(listFor("minutes", o)!.options).toEqual(["45 minutes monthly"]);
-    expect(o.lists).not.toHaveProperty("madeUp");
-    expect(o.blocks["a/b"]).toEqual({ hidden: true });
-    expect(normalizeOverrides(null)).toEqual(emptyOverrides());
-  });
-
   it("moves values saved by position to the block's id", () => {
-    const setup = { ...defaultSetup(), teacherAreas: { fine: true, gross: false, sensory: false } };
-    const migrated = migrateValueKeys({ "teacher/0/0": "general education teacher", "screen/g25-grasp/0": "tripod" }, otReportSections(setup));
-    expect(migrated).toEqual({ "teacher/teacher-concerns/0": "general education teacher", "screen/g25-grasp/0": "tripod" });
+    const migrated = migrateValueKeys({ "teacher/0/0": "general education teacher", "screen-g25/g25-grasp/0": "tripod" }, sections());
+    expect(migrated).toEqual({ "teacher/intro/0": "general education teacher", "screen-g25/g25-grasp/0": "tripod" });
   });
 });
-
-import { scanReportText } from "../src/report/privacy-words";
-import { starterLibrary } from "../src/model/defaults";
 
 describe("privacy check while editing the template", () => {
   const lib = starterLibrary();
   it("does not flag the template's own words, but still flags a new name", () => {
-    const typing = screenItemsFor("g68").find((i) => i.id === "g68-typing")!;
-    for (const ex of typing.examples) expect(scanReportText(ex, lib)).toEqual([]);
-    const flagged = scanReportText("He and Ms. Rivera reported that he types with Shift and Backspace.", lib).map((w) => w.text);
+    for (const s of sections()) for (const ex of s.examples) expect(scanReportText(ex, lib), s.id).toEqual([]);
+    const flagged = scanReportText("He and Ms. Rivera reported that he scored Below Average on Visual Perception.", lib).map((w) => w.text);
     expect(flagged).toContain("Rivera");
-    expect(flagged.filter((w) => ["He", "Shift", "Backspace"].includes(w))).toEqual([]);
+    expect(flagged.filter((w) => ["He", "Below", "Average", "Visual", "Perception"].includes(w))).toEqual([]);
   });
 });

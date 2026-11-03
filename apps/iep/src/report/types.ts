@@ -22,7 +22,6 @@ export const GRADE_GROUPS: { id: GradeGroup; label: string }[] = [
   { id: "g912", label: "9–12" },
 ];
 
-export type AssessmentId = "teacher" | "screen" | "beery" | "spm2";
 export type GoalArea = "writing" | "cutting" | "selfcare";
 export type TeacherArea = "fine" | "gross" | "sensory";
 export type TeacherAreas = Record<TeacherArea, boolean>;
@@ -39,19 +38,19 @@ export interface ReportSetup {
   concerns: boolean;
   grade: GradeGroup;
   pronoun: PronounSet;
-  /** Which assessments were done, by id (OT's are AssessmentId; a pack's are its own). Missing means done. */
+  /** Which assessments were done, by the pack's ids. Missing means done. */
   assessments: Record<string, boolean>;
   /** Which areas the teacher rating checklist reported concerns in; none ticked means no concerns. */
   teacherAreas: TeacherAreas;
   /** How services are delivered when the student qualifies. */
   serviceType: ServiceType;
-  /** Fine motor screen items done, by item id. Items for other grades are ignored. */
+  /** Tick boxes ticked, by paragraph id (a pack's `optional` paragraphs). Ids not in the report are ignored. */
   screenItems: string[];
   /** Annual review with services: number of objectives under the motor goal. */
   objectives: number;
   /** Related standards to list under the goal. */
   goalAreas: GoalArea[];
-  /** Rating grid ratings, by grid id ("spm2" or a pack's own), each keyed "group.row" (see grids.ts). */
+  /** Rating grid ratings, by grid id, each keyed "group.row" (see grids.ts). */
   ratings: Record<string, Record<string, string>>;
 }
 
@@ -90,13 +89,4 @@ export interface ReportSection {
   examples: string[];
   /** What to paste as notes for this section. Absent when the section is fixed wording only. */
   notesHint?: string;
-}
-
-export interface ScreenItem {
-  id: string;
-  label: string;
-  group: "classroom" | "supporting" | "paragraph";
-  /** Sentence opener with blanks. */
-  opener: string;
-  examples: string[];
 }

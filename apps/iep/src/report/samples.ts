@@ -3,7 +3,7 @@ import { convertPronouns, splitSentences } from "../model/splitter";
 import { fillPronouns } from "./render";
 
 /**
- * Sample sentences for a descriptive blank, taken from the author's own
+ * Sample sentences for a descriptive blank, taken from the template's own
  * examples for that item (or the section), rewritten for the chosen he/she.
  * [STUDENT] is turned into a pronoun because the section already names the
  * student once.
@@ -18,6 +18,8 @@ export function sampleSentences(examples: string[] | undefined, pronoun: Pronoun
         .replace(/^\[STUDENT\]['’]s\b/, pronoun === "he" ? "His" : "Her")
         .replace(/^\[STUDENT\]/, pronoun === "he" ? "He" : "She")
         .replace(/\[STUDENT\]['’]s\b/g, pronoun === "he" ? "his" : "her")
+        // After a preposition the student is an object: "with him", "to her".
+        .replace(/\b(with|to|for|from|by|of|about|at|on|in|between|beside|near)\s+\[STUDENT\]/g, (_m, prep: string) => `${prep} ${pronoun === "he" ? "him" : "her"}`)
         .replace(/\[STUDENT\]/g, pronoun === "he" ? "he" : "she");
       const sentence = fillPronouns(convertPronouns(s).text, pronoun).trim();
       if (sentence && !out.includes(sentence)) out.push(sentence);

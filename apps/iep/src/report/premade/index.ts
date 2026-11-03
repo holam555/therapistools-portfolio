@@ -1,5 +1,6 @@
 import type { DisciplineId } from "../../model/disciplines";
 import type { TemplatePack } from "../pack";
+import { otPack } from "./ot";
 import { otherPack } from "./other";
 import { psychPack } from "./psych";
 import { ptPack } from "./pt";
@@ -7,14 +8,14 @@ import { slpPack } from "./slp";
 import { spedPack } from "./sped";
 
 /**
- * Ready-made template packs, one per discipline other than OT (whose template
- * is code). Each call builds a fresh pack, so an edit to one writer's copy
- * never reaches the built-in wording.
+ * Ready-made template packs, one per discipline. Each call builds a fresh
+ * pack, so an edit to one writer's copy never reaches the built-in wording.
  */
 
-export const PREMADE_DISCIPLINES: DisciplineId[] = ["slp", "pt", "psych", "sped", "other"];
+export const PREMADE_DISCIPLINES: DisciplineId[] = ["ot", "slp", "pt", "psych", "sped", "other"];
 
-const BUILDERS: Partial<Record<DisciplineId, () => TemplatePack>> = {
+const BUILDERS: Record<DisciplineId, () => TemplatePack> = {
+  ot: otPack,
   slp: slpPack,
   pt: ptPack,
   psych: psychPack,
@@ -22,10 +23,9 @@ const BUILDERS: Partial<Record<DisciplineId, () => TemplatePack>> = {
   other: otherPack,
 };
 
-/** A new copy of the discipline's ready-made pack, or null when it has none (OT). */
-export function premadePack(d: DisciplineId): TemplatePack | null {
-  const build = BUILDERS[d];
-  return build ? build() : null;
+/** A new copy of the discipline's ready-made pack. */
+export function premadePack(d: DisciplineId): TemplatePack {
+  return BUILDERS[d]();
 }
 
 function collectStrings(data: unknown, out: string[]): void {

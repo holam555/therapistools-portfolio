@@ -1,21 +1,17 @@
 import type { DisciplineId } from "../model/disciplines";
 import { announceTemplateChange } from "../account/events";
 
-import { cloneGrid, gridSummaryPhrase, groupSentences, levelLine, normalizeGrid, type GridDef, type GridRatings } from "./grids";
+import { gridSummaryPhrase, groupSentences, levelLine, normalizeGrid, type GridDef, type GridRatings } from "./grids";
 import { OPTION_LISTS, type OptionList } from "./options";
-import { otReportSections, OT_REPORT_TITLE } from "./ot-pack";
-import { SCREEN_BORROWED, screenItemsFor } from "./ot-screen";
-import { applyScreenOverrides, gridFor, listFor, type TemplateOverrides } from "./overrides";
 import { fillPattern } from "./render";
-import { defaultSetup, withGrade } from "./setup";
 import { GRADE_GROUPS, type Block, type GoalArea, type GradeGroup, type ReportSection, type ReportSetup, type ReportType, type ServiceType, type TeacherArea, type TeacherAreas } from "./types";
 
 /**
  * A template pack: one discipline's report template as plain data, built and
- * edited inside the tool and kept in the writer's browser. Occupational
- * therapy's template is code (ot-pack.ts); every other discipline uses a pack,
- * started blank, copied from the OT template, or (later) built from the
- * writer's own document. Packs hold template wording only, never a student.
+ * edited inside the tool and kept in the writer's browser. Every discipline
+ * uses one, started from the ready-made sample (premade/), blank, or built
+ * from the writer's own document. Packs hold template wording only, never a
+ * student.
  */
 
 /** When a section or paragraph appears. Every field left out means "always". */
@@ -233,164 +229,6 @@ export function blankPack(disciplineLabel: string): TemplatePack {
 
 function copyLists(): Record<string, OptionList> {
   return Object.fromEntries(Object.entries(OPTION_LISTS).map(([k, v]) => [k, { ...v, options: [...v.options] }]));
-}
-
-type Row = [id: string, extras?: PackBlockExtras];
-
-/** Every version of the OT report, so each paragraph it can write is seen once. */
-function otVariants(): ReportSetup[] {
-  const out: ReportSetup[] = [];
-  const areas: TeacherAreas[] = [
-    { fine: true, gross: true, sensory: true },
-    { fine: false, gross: false, sensory: false },
-    { fine: false, gross: true, sensory: false },
-    { fine: true, gross: false, sensory: true },
-  ];
-  for (const g of GRADE_GROUPS)
-    for (const reportType of ["evaluation", "annual"] as const)
-      for (const concerns of [true, false])
-        for (const teacherAreas of areas)
-          for (const serviceType of ["direct", "indirect"] as const)
-            for (const spm2 of [true, false])
-              out.push({ ...withGrade(defaultSetup(), g.id), reportType, concerns, teacherAreas, serviceType, assessments: { teacher: true, screen: true, beery: true, spm2 }, objectives: 3, goalAreas: ["writing", "cutting", "selfcare"] });
-  return out;
-}
-
-/**
- * The OT template, with a writer's edits laid over, as a pack that reads
- * exactly the same for every setup. What the OT code decides at report time
- * becomes conditions on paragraphs: which teacher areas were ticked, direct
- * or indirect services, which standards, how many objectives, and which
- * screen items were done (tick boxes). Section and paragraph ids are kept,
- * so filled blanks and ticks carry over.
- */
-export function packFromOt(disciplineLabel: string, o?: TemplateOverrides): TemplatePack {
-  const sections = new Map<string, ReportSection>();
-  const blocks = new Map<string, Block>();
-  for (const setup of otVariants())
-    for (const s of otReportSections(withGrade(setup, setup.grade, o), o)) {
-      if (!sections.has(s.id)) sections.set(s.id, s);
-      for (const b of s.blocks) if (b.id && !blocks.has(`${s.id}/${b.id}`)) blocks.set(`${s.id}/${b.id}`, b);
-    }
-  /** A paragraph as the template writes it, or null when the writer hid it. */
-  const block = (sectionId: string, id: string): Block | null => {
-    const b = blocks.get(`${sectionId}/${id}`);
-    if (!b) return null;
-    const { generated: _g, grid: _grid, pattern, slots: _s, sourceId: _src, ...rest } = b;
-    return { ...rest, ...(pattern !== undefined ? { text: pattern } : {}) } as Block;
-  };
-  const must = (sectionId: string, id: string): Block => {
-    const b = block(sectionId, id);
-    if (!b) throw new Error(`OT template has no ${sectionId}/${id}`);
-    return b;
-  };
-  const section = (id: string, rows: (PackBlock | Row | null)[], extra: Partial<PackSection> = {}): PackSection => {
-    const s = sections.get(id);
-    if (!s) throw new Error(`OT template has no section ${id}`);
-    const packBlocks: PackBlock[] = [];
-    for (const r of rows) {
-      if (r === null) continue;
-      if (!Array.isArray(r)) {
-        packBlocks.push(r);
-        continue;
-      }
-      const b = block(id, r[0]);
-      if (b) packBlocks.push({ ...b, ...(r[1] ?? {}) } as PackBlock);
-    }
-    // Samples the section borrowed from its paragraphs come back through them.
-    const borrowed = JSON.stringify(s.blocks.flatMap((b) => b.examples ?? [])) === JSON.stringify(s.examples);
-    return { id, title: s.title, blocks: packBlocks, examples: borrowed ? [] : [...s.examples], ...(s.notesHint ? { notesHint: s.notesHint } : {}), ...extra };
-  };
-
-  // The fine motor screen: one section, each grade group's items as tick boxes under their own subheadings.
-  const screenRows: (PackBlock | null)[] = [block("screen", "intro")];
-  for (const g of GRADE_GROUPS) {
-    if (SCREEN_BORROWED[g.id]) continue;
-    const grades = [g.id, ...GRADE_GROUPS.filter((x) => SCREEN_BORROWED[x.id] === g.id).map((x) => x.id)];
-    const when: PackCondition = { grades };
-    const items = applyScreenOverrides(screenItemsFor(g.id), g.id, o);
-    const group = (name: "classroom" | "supporting", heading: string) => {
-      const list = items.filter((i) => i.group === name);
-      if (!list.length) return;
-      screenRows.push({ ...must("screen", heading), id: `${heading}-${g.id}`, when } as PackBlock);
-      for (const i of list) {
-        const b = block("screen", i.id);
-        if (b) screenRows.push({ ...b, when, optional: true } as PackBlock);
-      }
-    };
-    group("classroom", "h-classroom");
-    group("supporting", "h-supporting");
-    for (const i of items.filter((x) => x.group === "paragraph")) {
-      const b = block("screen", i.id);
-      if (b) screenRows.push({ ...b, when, optional: true } as PackBlock);
-    }
-  }
-
-  const sensory = block("summary", "sensory");
-  const spmName = "Sensory Processing Measure-2 School form and teacher report";
-  const any = { anyTeacherArea: true };
-  const assessments: PackAssessment[] = [
-    {
-      id: "teacher", label: "Teacher rating checklist",
-      sections: [
-        section("teacher", [
-          ["teacher-none", { when: { anyTeacherArea: false } }],
-          ["teacher-concerns", { when: { teacherAreas: { fine: true } } }],
-          ["teacher-fine-none", { when: { teacherAreas: { fine: false }, ...any } }],
-          ["teacher-gross", { when: { teacherAreas: { gross: true } } }],
-          ["teacher-gross-none", { when: { teacherAreas: { gross: false }, ...any } }],
-          ["teacher-sensory", { when: { teacherAreas: { sensory: true } } }],
-          ["teacher-sensory-none", { when: { teacherAreas: { sensory: false }, ...any } }],
-          ["teacher-accommodations", { when: any }],
-        ]),
-      ],
-    },
-    { id: "screen", label: "Informal fine motor screen", sections: [section("screen", screenRows)] },
-    { id: "beery", label: "Beery VMI", sections: [section("beery", [["intro"], ["vmi"], ["vp"], ["mc"]])] },
-    {
-      id: "spm2", label: "SPM-2 School form", grid: cloneGrid(gridFor("spm2", o)),
-      sections: [section("spm2", [["h-sensory"], ["definition"], ["completed-by"], { kind: "grid", id: "grid-spm2", grid: "spm2" }, ["composite"], ["def-social"], ["def-vision"], ["def-hearing"], ["def-touch"], ["def-body"], ["def-planning"], ["def-balance"]])],
-    },
-  ];
-
-  const packSections: PackSection[] = [
-    section("plop-header", [["reported-by"], ["h-record"], ["record-review"], ["h-present"]], { place: "before", when: { reportType: "annual" } }),
-    section(
-      "summary",
-      [
-        ["summary-none", { when: { concerns: false } }],
-        ["fine-motor", { when: { concerns: true } }],
-        sensory && ({ ...sensory, text: sensory.text.replace("{assessments}", spmName).replace("{results}", "{summary:spm2}"), when: { concerns: true, assessments: { spm2: true } } } as PackBlock),
-        sensory && ({ ...sensory, id: "sensory-other", text: sensory.text.replace("{assessments}", "[[sensory assessments used]]").replace("{results}", "[[results by scale]]"), when: { concerns: true, assessments: { spm2: false, teacher: true } } } as PackBlock),
-      ],
-      { place: "after", when: { reportType: "evaluation" } },
-    ),
-    section("next-steps", [["next-steps"], ["closing"]], { place: "after", when: { concerns: true } }),
-    section("impact", [["impact"]], { place: "after", when: { concerns: true } }),
-    section("service", [["service", { when: { serviceType: "direct" } }], ["service-indirect", { when: { serviceType: "indirect" } }]], { place: "after", when: { concerns: true } }),
-    section(
-      "goal",
-      [
-        ["goal-frame"],
-        { ...must("goal", "objective1"), id: "objective", repeat: "objectives" } as PackBlock,
-        ["h-standards"],
-        ["standard-writing", { when: { goalArea: "writing" } }],
-        ["standard-cutting", { when: { goalArea: "cutting" } }],
-        ["standard-selfcare", { when: { goalArea: "selfcare" } }],
-      ],
-      { place: "after", when: { concerns: true } },
-    ),
-    section("ending", [["ending"], ["closing"]], { place: "after", when: { reportType: "annual", concerns: false } }),
-  ];
-
-  const lists: Record<string, OptionList> = {};
-  for (const name of Object.keys(OPTION_LISTS)) {
-    const l = listFor(name, o)!;
-    lists[name] = { options: [...l.options], ...(l.multi ? { multi: true } : {}) };
-  }
-  const titles =
-    disciplineLabel === "Occupational Therapy" ? { ...OT_REPORT_TITLE } : { evaluation: `${disciplineLabel} Evaluation Report`, annual: `${disciplineLabel} Annual Review` };
-  return { version: 1, titles, assessments, sections: packSections, lists };
 }
 
 // ---------- storage ----------

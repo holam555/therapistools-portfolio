@@ -7,7 +7,6 @@ import {
 import { libraryFor } from "../model/defaults";
 import { DISCIPLINES, getDiscipline, type DisciplineId } from "../model/disciplines";
 import { makeBackup, mergeLibraries, parseBackup, serializeBackup } from "../model/storage";
-import { hasOverrides, loadOverrides, normalizeOverrides, saveOverrides } from "../report/overrides";
 import { loadPack, normalizePack, savePack } from "../report/pack";
 import { BLANKS_MARKER, DEFAULT_PROMPT_TEMPLATE, ROLE_MARKER, TEMPLATE_MARKER, promptTemplate } from "../model/prompt";
 import { isValidVariableName, variableNames } from "../model/template";
@@ -32,7 +31,7 @@ export function Settings() {
   const exportJson = () => {
     downloadText(
       `therapistools-iep-${discipline}-backup-${todayStamp()}.json`,
-      serializeBackup(makeBackup(lib, recipes, discipline, hasOverrides(loadOverrides(discipline)) ? loadOverrides(discipline) : undefined, loadPack(discipline) ?? undefined)),
+      serializeBackup(makeBackup(lib, recipes, discipline, loadPack(discipline) ?? undefined)),
     );
     setMessage("Backup file saved to your Downloads folder.");
   };
@@ -86,7 +85,7 @@ export function Settings() {
 
       <section className="card">
         <h2>Backup</h2>
-        <p className="hint">Your library, recipes and report-template edits live inside this browser on this computer. Export a file now and then so you can restore them.</p>
+        <p className="hint">Your library, recipes and report template live inside this browser on this computer. Export a file now and then so you can restore them.</p>
         <div className="row gap wrap">
           <button type="button" className="btn btn-primary" onClick={exportJson}>Export JSON</button>
           <button type="button" className="btn" onClick={() => fileRef.current?.click()}>Import JSON…</button>
@@ -108,20 +107,6 @@ export function Settings() {
                 className="btn btn-primary"
                 onClick={() => {
                   replace(mergeLibraries(lib, pendingImport.library));
-                  if (pendingImport.template) {
-                    // Merge: keep your own edits, add the file's edits where you have none.
-                    const mine = loadOverrides(discipline);
-                    const theirs = normalizeOverrides(pendingImport.template);
-                    saveOverrides(discipline, {
-                      version: 1,
-                      blocks: { ...theirs.blocks, ...mine.blocks },
-                      sectionExamples: { ...theirs.sectionExamples, ...mine.sectionExamples },
-                      lists: { ...theirs.lists, ...mine.lists },
-                      screen: { ...theirs.screen, ...mine.screen },
-                      grids: { ...theirs.grids, ...mine.grids },
-                      titles: { ...theirs.titles, ...mine.titles },
-                    });
-                  }
                   // A template pack is taken from the file only when there is none here yet.
                   if (pendingImport.pack && !loadPack(discipline)) savePack(discipline, normalizePack(pendingImport.pack));
                   setPendingImport(null);
@@ -136,7 +121,6 @@ export function Settings() {
                 onClick={() => {
                   if (confirmAction(`Replace the current library (${n(lib)} sentences) with the file? You can undo with Cmd/Ctrl+Z.`)) {
                     replace(pendingImport.library);
-                    if (pendingImport.template) saveOverrides(discipline, normalizeOverrides(pendingImport.template));
                     if (pendingImport.pack) savePack(discipline, normalizePack(pendingImport.pack));
                     if (pendingImport.recipes.length) setRecipes(pendingImport.recipes);
                     setPendingImport(null);

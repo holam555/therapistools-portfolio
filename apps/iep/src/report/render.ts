@@ -1,4 +1,5 @@
 import type { PronounSet } from "../model/types";
+import { convertPronouns } from "../model/splitter";
 import { renderText } from "../model/template";
 import type { Block, ReportSection, ReportValues } from "./types";
 import { parseBlank } from "./options";
@@ -86,4 +87,22 @@ export function blanksIn(s: ReportSection, pronoun: PronounSet, values: ReportVa
   const out: string[] = [];
   for (const r of renderSection(s, pronoun, values)) for (const run of r.runs) if (run.blank && !out.includes(run.text)) out.push(run.text);
   return out;
+}
+
+// ---------- editing as plain text ----------
+
+/**
+ * Template text shown for editing: pronouns written as he/him/his and the
+ * student as [STUDENT], so it reads like a normal report.
+ */
+export function toEditable(templateText: string): string {
+  return fillPronouns(templateText, "he");
+}
+
+/**
+ * Back from editable text to template text: he/him/his become pronoun marks so
+ * the sentence still switches to she/her, and [STUDENT] becomes the student mark.
+ */
+export function fromEditable(text: string): string {
+  return convertPronouns(text.replace(/\[STUDENT\]/g, "{{student}}")).text;
 }

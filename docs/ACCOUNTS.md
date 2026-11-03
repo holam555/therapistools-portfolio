@@ -23,10 +23,11 @@ less work than running an account server on the homelab box.
 | Build | `apps/iep/vite.config.ts` | The website page gets a CSP whose `connect-src` is exactly the Supabase origin. `vite build --mode offline` makes the downloadable file: empty address, supabase-js swapped for a stub, `connect-src 'none'` |
 | Deploy gate | `infra/publish.sh` | Refuses a release whose IEP page may connect anywhere but one `*.supabase.co` origin, or whose offline file may connect at all |
 
-**What syncs.** For OT, the edits laid over the built-in template
-(`easyiep.template`). For every other discipline, the template pack
-(`easyiep.pack.<discipline>`). `sync.ts` reads only those two stores; a test
-fails if it ever names a draft, values, setup, recipe or library store.
+**What syncs.** The template pack of each discipline
+(`easyiep.pack.<discipline>`), as rows of kind `pack`. `sync.ts` reads only
+that store; a test fails if it ever names a draft, values, setup, recipe or
+library store. Rows of kind `overrides` (OT edits from before 2026-11-03)
+are neither read nor removed.
 
 **Which way it moves.** The browser keeps the copy both sides last agreed on
 (`easyiep.account.synced.<user>.<discipline>.<kind>`). On sign-in, the side
@@ -123,12 +124,16 @@ sample. Now: new visitors get the generic sample; the owner's wording exists
 only in their browser, backup file and account, and "Reset to original" gives
 the generic sample.
 
-Second move, same day: the OT template is becoming a pack the writer owns,
-like every other discipline, so the built-in OT template can take a different
-shape. `apps/iep/src/report/adopt.ts` turns a browser's OT edits into its own
-pack once (ids are kept, so filled blanks and ticks carry over); the account
-then holds it as kind `pack`. The old `overrides` rows stay in the table
-unused.
+Second move, same day: the OT template became a pack the writer owns, like
+every other discipline. Release `6df3a65` turned a browser's OT edits into
+its own pack once (ids kept, so filled blanks and ticks carried over); the
+owner opened the site signed in and confirmed the account holds it as kind
+`pack`. The next release retired the OT code template, the overrides layer,
+the freeze and the adoption code, and replaced the built-in OT wording with a
+brand-new generic sample pack in a different shape. The old `overrides` rows
+stay in the table unused. A browser that never ran the adoption (none of the
+owner's, as far as known) would start from the sample or pull the pack from
+the account on sign-in.
 
 ## Changing the privacy page
 

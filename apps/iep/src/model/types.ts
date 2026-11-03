@@ -76,9 +76,7 @@ export interface Backup {
   exportedAt: string;
   library: Library;
   recipes: Recipe[];
-  /** The writer's report-template edits (see report/overrides.ts); missing in older backups. */
-  template?: unknown;
-  /** The discipline's own report template pack (see report/pack.ts); OT has none. */
+  /** The discipline's report template pack (see report/pack.ts); missing in older backups. Files from before 2026-11-03 may also hold `template`, the retired OT edits, which is ignored. */
   pack?: unknown;
 }
 

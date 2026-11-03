@@ -18,8 +18,8 @@ what you did. You get a Word draft with every fixed sentence and sentence
 opener written in and the blanks highlighted, plus one AI prompt per section to
 finish it with your own notes in Gemini.
 
-Every discipline comes with a pre-made generic template: occupational
-therapy's is built in, and the others are offered on the Report tab. You can
+Every discipline comes with a pre-made generic template, offered on the
+Report tab the first time you open it. You can
 also **build from your own document** (a Word
 file or pasted text of your district's form or a finished report; headings
 become sections, rating tables become checklists, highlighted or bracketed

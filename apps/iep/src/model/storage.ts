@@ -103,7 +103,7 @@ export function saveDraft(d: BuilderState, discipline: DisciplineId = "ot"): voi
 
 // ---------- backup file ----------
 
-export function makeBackup(library: Library, recipes: Recipe[], discipline?: DisciplineId, template?: unknown, pack?: unknown): Backup {
+export function makeBackup(library: Library, recipes: Recipe[], discipline?: DisciplineId, pack?: unknown): Backup {
   return {
     app: "easyiep",
     version: 1,
@@ -111,7 +111,6 @@ export function makeBackup(library: Library, recipes: Recipe[], discipline?: Dis
     ...(discipline ? { discipline } : {}),
     library,
     recipes,
-    ...(template ? { template } : {}),
     ...(pack ? { pack } : {}),
   };
 }
@@ -142,7 +141,6 @@ export function parseBackup(text: string): Backup {
     ...(isDisciplineId(obj.discipline) ? { discipline: obj.discipline } : {}),
     library,
     recipes,
-    ...(obj.template && typeof obj.template === "object" ? { template: obj.template } : {}),
     ...(obj.pack && typeof obj.pack === "object" ? { pack: obj.pack } : {}),
   };
 }

@@ -1,30 +1,23 @@
 import type { DisciplineId } from "../model/disciplines";
+import { ratingKey } from "./grids";
 import type { GradeGroup, ReportSetup } from "./types";
 import { GRADE_GROUPS } from "./types";
-import { screenItemsFor } from "./ot-screen";
-import { applyScreenOverrides, type TemplateOverrides } from "./overrides";
-import { spmKey } from "./spm";
 
-/** A sensible starting point: every assessment ticked, every screen item for the grade ticked. */
+/** A sensible starting point: every assessment ticked (unknown ones count as ticked). Tick boxes are ticked when a template is chosen. */
 export function defaultSetup(grade: GradeGroup = "g25"): ReportSetup {
   return {
     reportType: "evaluation",
     concerns: true,
     grade,
     pronoun: "he",
-    assessments: { teacher: true, screen: true, beery: true, spm2: true },
+    assessments: {},
     teacherAreas: { fine: true, gross: false, sensory: false },
     serviceType: "direct",
-    screenItems: screenItemsFor(grade).map((i) => i.id),
+    screenItems: [],
     objectives: 3,
     goalAreas: ["writing", "cutting"],
     ratings: {},
   };
-}
-
-/** Changing grade swaps the screen items for that grade (including the writer's own), all ticked. */
-export function withGrade(setup: ReportSetup, grade: GradeGroup, o?: TemplateOverrides): ReportSetup {
-  return { ...setup, grade, screenItems: applyScreenOverrides(screenItemsFor(grade), grade, o).map((i) => i.id) };
 }
 
 /**
@@ -51,7 +44,7 @@ export function migrateValueKeys(values: Record<string, string>, sections: { id:
 
 /** SPM-2 results were once keyed by scale name alone; grids key every rating "group.row". */
 export function migrateSpmKeys(spm: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(Object.entries(spm).map(([k, v]) => [k.includes(".") ? k : spmKey(k), v]));
+  return Object.fromEntries(Object.entries(spm).map(([k, v]) => [k.includes(".") ? k : ratingKey("scales", k), v]));
 }
 
 const KEY = (d: DisciplineId) => (d === "ot" ? "easyiep.report" : `easyiep.report.${d}`);

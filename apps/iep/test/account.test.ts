@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { libraryFor } from "../src/model/defaults";
 import { canon, checkTemplate, decide, rowFor, templateStrings } from "../src/account/sync";
-import { emptyOverrides } from "../src/report/overrides";
+import { blankPack } from "../src/report/pack";
 import { accountOrigin, cspFor, SUPABASE_ORIGIN } from "../vite.config";
 
 // An account holds the writer's template and nothing else. These tests pin
@@ -11,8 +11,8 @@ import { accountOrigin, cspFor, SUPABASE_ORIGIN } from "../vite.config";
 
 describe("account sync: comparing copies", () => {
   it("reads the same template the same whatever the key order", () => {
-    const a = { version: 1, blocks: { "s/b": { text: "x", label: "y" } }, titles: {} };
-    const b = { titles: {}, blocks: { "s/b": { label: "y", text: "x" } }, version: 1 };
+    const a = { version: 1, sections: [{ id: "s", blocks: [{ text: "x", label: "y" }] }], titles: {} };
+    const b = { titles: {}, sections: [{ blocks: [{ label: "y", text: "x" }], id: "s" }], version: 1 };
     expect(canon(a)).toBe(canon(b));
     expect(canon(null)).toBe("");
   });
@@ -36,7 +36,7 @@ describe("account sync: comparing copies", () => {
 
 describe("account sync: what is sent", () => {
   it("sends only the template columns", () => {
-    const row = rowFor("user-1", "ot", "overrides", { version: 1 });
+    const row = rowFor("user-1", "ot", "pack", { version: 1 });
     expect(Object.keys(row).sort()).toEqual(["data", "discipline", "kind", "user_id"]);
   });
 
@@ -49,7 +49,7 @@ describe("account sync: what is sent", () => {
 
 describe("account sync: privacy gate", () => {
   const lib = libraryFor("ot");
-  const withText = (text: string) => ({ ...emptyOverrides(), blocks: { "summary/b1": { text } } });
+  const withText = (text: string) => ({ ...blankPack("X"), sections: [{ id: "summary", title: "Summary", blocks: [{ kind: "para", id: "b1", text }], examples: [] }] });
 
   it("collects every string in a template", () => {
     expect(templateStrings({ a: "one", b: ["two", { c: "three" }], d: 4 })).toEqual(["one", "two", "three"]);

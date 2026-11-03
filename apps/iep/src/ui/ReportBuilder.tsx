@@ -1,36 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { getDiscipline } from "../model/disciplines";
+import type { GridDef } from "../report/grids";
+import {
+  assessmentOn, blankPack, conditionHolds, findSection, loadPack, moveInList, newPackId, optionalBlocks, packGrids, packSections, packUses, savePack, updateBlock, updateSection,
+  type PackAssessment, type PackBlock, type PackSection, type TemplatePack,
+} from "../report/pack";
 import type { PronounSet } from "../model/types";
-import { gridRatedCount, type GridDef } from "../report/grids";
-import { otReportSections, OT_REPORT_TITLE } from "../report/ot-pack";
-import { SCREEN_BORROWED, screenItemsFor } from "../report/ot-screen";
-import { loadSetup, loadValues, migrateValueKeys, saveSetup, saveValues, withGrade } from "../report/setup";
-import { BUILT_IN_GRIDS, applyScreenOverrides, emptyOverrides, gridFor, hasOverrides, listFor, loadOverrides, saveOverrides, type BlockOverride, type TemplateOverrides } from "../report/overrides";
-import { OPTION_LISTS } from "../report/options";
-import { blockKeyOf } from "../report/render";
-import { GRADE_GROUPS, TEACHER_AREAS, type AssessmentId, type Block, type GoalArea, type ReportSetup, type ReportValues, type ScreenItem } from "../report/types";
-import { AddScreenItemModal, EditBlockModal, GridEditorModal, ListEditorModal, TitleEditorModal } from "./TemplateEditors";
-import { PackReportBuilder } from "./PackReportBuilder";
-import { loadPack } from "../report/pack";
+import { premadePack } from "../report/premade";
+import { loadSetup, loadValues, saveSetup, saveValues } from "../report/setup";
+import { GRADE_GROUPS, TEACHER_AREAS, type Block, type GoalArea, type ReportSetup, type ReportValues } from "../report/types";
+import { ImportDocument } from "./ImportDocument";
 import { RatingPanel, ReportOutput } from "./ReportOutput";
+import { AddAssessmentModal, AddBlockModal, EditBlockModal, GridEditorModal, ListEditorModal, SectionSettingsModal, TitleEditorModal } from "./TemplateEditors";
 import { confirmAction } from "./common";
 import { useApp } from "./state";
 
-const ASSESSMENTS: { id: AssessmentId; label: string }[] = [
-  { id: "teacher", label: "Teacher rating checklist" },
-  { id: "screen", label: "Informal fine motor screen" },
-  { id: "beery", label: "Beery VMI" },
-  { id: "spm2", label: "SPM-2 School form" },
-];
+const GOAL_AREA_LABEL: Record<GoalArea, string> = { writing: "Writing", cutting: "Cutting", selfcare: "Self care" };
 
-const GOAL_AREAS: { id: GoalArea; label: string }[] = [
-  { id: "writing", label: "Writing" },
-  { id: "cutting", label: "Cutting" },
-  { id: "selfcare", label: "Self care" },
-];
-
-/** Shared by the OT builder and the pack builder. */
-export function useFlash(): [string | null, (m: string) => void] {
+function useFlash(): [string | null, (m: string) => void] {
   const [flash, setFlash] = useState<string | null>(null);
   const say = (m: string) => {
     setFlash(m);
@@ -40,8 +27,8 @@ export function useFlash(): [string | null, (m: string) => void] {
 }
 
 /** Filled blank values, saved per discipline. */
-export function useValues(discipline: Parameters<typeof loadValues>[0], migrate?: (v: ReportValues) => ReportValues) {
-  const [values, setValues] = useState<ReportValues>(() => (migrate ? migrate(loadValues(discipline)) : loadValues(discipline)));
+function useValues(discipline: Parameters<typeof loadValues>[0]) {
+  const [values, setValues] = useState<ReportValues>(() => loadValues(discipline));
   useEffect(() => saveValues(discipline, values), [discipline, values]);
   const setValue = (key: string, v: string) =>
     setValues((cur) => {
@@ -54,51 +41,97 @@ export function useValues(discipline: Parameters<typeof loadValues>[0], migrate?
   return { values, setValues, setValue, filledCount };
 }
 
+/** A tick box's paragraph shows when its section's and its own conditions hold. */
+const tickShown = (x: { section: PackSection; block: Block & { when?: PackSection["when"] } }, setup: ReportSetup) =>
+  conditionHolds(x.section.when, setup) && conditionHolds(x.block.when, setup);
+
 /**
- * Report builder: choose what you did, fill blanks by clicking them, get a Word
- * draft with every fixed sentence already written, and one AI prompt per
- * section to finish the rest with your own notes. Occupational therapy uses
- * the built-in template; other disciplines use their own pack.
+ * The Report tab: choose what you did, fill blanks by clicking them, get a
+ * Word draft with every fixed sentence already written, and one AI prompt per
+ * section to finish the rest with your own notes. The template is a pack the
+ * writer owns, started from the ready-made sample, their own document, or
+ * blank; every edit changes the pack itself and is saved in this browser (and
+ * in Settings → Backup).
  */
 export function ReportBuilder() {
   const { discipline } = useApp();
-  // OT keeps the built-in template until this browser has a pack of its own (src/report/adopt.ts).
-  const [ownPack] = useState(() => discipline === "ot" && !!loadPack("ot"));
-  if (discipline !== "ot" || ownPack) return <PackReportBuilder />;
-  return <OtReportBuilder />;
+  const current = getDiscipline(discipline);
+  const [pack, setPack] = useState<TemplatePack | null>(() => loadPack(discipline));
+  useEffect(() => savePack(discipline, pack), [discipline, pack]);
+  // A new template starts with every tick box for the current grade ticked.
+  const choose = (p: TemplatePack) => {
+    const s = loadSetup(discipline);
+    const ids = optionalBlocks(p).filter((x) => tickShown(x, s)).map((x) => x.block.id!);
+    saveSetup(discipline, { ...s, screenItems: [...new Set([...s.screenItems, ...ids])] });
+    setPack(p);
+  };
+  if (!pack) return <PackStart label={current.label} premade={() => premadePack(discipline)} onChoose={choose} />;
+  return <PackEditor pack={pack} setPack={setPack} onDiscard={() => setPack(null)} />;
 }
 
-function OtReportBuilder() {
+function PackStart({ label, premade, onChoose }: { label: string; premade: () => TemplatePack; onChoose: (p: TemplatePack) => void }) {
+  const [importing, setImporting] = useState(false);
+  if (importing) return <ImportDocument disciplineLabel={label} onDone={onChoose} onCancel={() => setImporting(false)} />;
+  return (
+    <section className="card report-empty">
+      <h2>Start a report template for {label.toLowerCase()}</h2>
+      <p className="hint">
+        A template is the report with its fixed wording written in and yellow blanks where each student differs. It is saved only in this browser, and in
+        Settings → Backup. You can change every word of it later.
+      </p>
+      <div className="start-choices">
+        <button type="button" className="start-choice" onClick={() => setImporting(true)}>
+          <strong>Build from my own document</strong>
+          <span className="hint">Upload your district's report template or one of your own finished reports as a Word file, or paste its text, and get a draft template to correct.</span>
+        </button>
+        <button type="button" className="start-choice" onClick={() => onChoose(blankPack(label))}>
+          <strong>Start blank</strong>
+          <span className="hint">One summary section to begin with. Add your own sections and assessments.</span>
+        </button>
+        <button type="button" className="start-choice" onClick={() => onChoose(premade())}>
+          <strong>Pre-made {label.toLowerCase()} template</strong>
+          <span className="hint">A generic sample report for {label.toLowerCase()}: assessments, checklists, summary, next steps, services and a goal, with plain wording and fictional examples. Change any of it.</span>
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack: (p: TemplatePack) => void; onDiscard: () => void }) {
   const { discipline } = useApp();
   const current = getDiscipline(discipline);
   const [setup, setSetup] = useState<ReportSetup>(() => loadSetup(discipline));
-  // Values filled before blocks had ids were stored by position; move them once.
-  const { values, setValues, setValue, filledCount } = useValues(discipline, (v) => migrateValueKeys(v, otReportSections(loadSetup(discipline))));
-  const [overrides, setOverrides] = useState<TemplateOverrides>(() => loadOverrides(discipline));
+  const { values, setValues, setValue, filledCount } = useValues(discipline);
   const [editMode, setEditMode] = useState(false);
-  const [editing, setEditing] = useState<{ sectionId: string; blockKey: string } | null>(null);
+  const [editing, setEditing] = useState<{ sectionId: string; blockId: string } | null>(null);
+  const [addingBlock, setAddingBlock] = useState<string | null>(null);
+  const [sectionSettings, setSectionSettings] = useState<string | "new" | null>(null);
+  const [assessmentRename, setAssessmentRename] = useState<string | null>(null);
+  const [addingAssessment, setAddingAssessment] = useState(false);
   const [listEditing, setListEditing] = useState<string | null>(null);
   const [gridEditing, setGridEditing] = useState<string | null>(null);
-  const [titleEditing, setTitleEditing] = useState<string | null>(null);
-  const [adding, setAdding] = useState<ScreenItem["group"] | null>(null);
   const [flash, say] = useFlash();
 
   useEffect(() => saveSetup(discipline, setup), [discipline, setup]);
-  useEffect(() => saveOverrides(discipline, overrides), [discipline, overrides]);
-
-  const sections = useMemo(() => otReportSections(setup, overrides), [setup, overrides]);
-  // The same report without wording edits, to compare against and to reset to.
-  const originals = useMemo(() => otReportSections(setup, { ...overrides, blocks: {}, sectionExamples: {} }), [setup, overrides]);
-  // The checklist shows items under the names the writer gave them in the preview.
-  const items = applyScreenOverrides(screenItemsFor(setup.grade), setup.grade, overrides).map((i) => ({ ...i, label: overrides.blocks[`screen/${i.id}`]?.label ?? i.label }));
-  const borrowed = SCREEN_BORROWED[setup.grade];
+  const sections = useMemo(() => packSections(pack, setup), [pack, setup]);
+  const grids = packGrids(pack);
+  const listNames = Object.keys(pack.lists);
+  const uses = useMemo(() => packUses(pack), [pack]);
+  const optional = useMemo(() => optionalBlocks(pack), [pack]);
 
   const patch = (p: Partial<ReportSetup>) => setSetup((s) => ({ ...s, ...p }));
-  const toggleItem = (id: string) =>
-    patch({ screenItems: setup.screenItems.includes(id) ? setup.screenItems.filter((x) => x !== id) : [...setup.screenItems, id] });
-  const setGroupItems = (group: string, on: boolean) => {
-    const ids = items.filter((i) => i.group === group).map((i) => i.id);
+  /** Tick boxes under an assessment, for the current grade. */
+  const itemsOf = (assessmentId: string, s: ReportSetup = setup) => optional.filter((x) => x.assessment.id === assessmentId && tickShown(x, s));
+  const itemLabel = (b: Block) => ("label" in b && b.label) || b.text.replace(/\{\{\w+\}\}|\[\[.*?\]\]/g, "…").slice(0, 40);
+  const toggleItem = (id: string) => patch({ screenItems: setup.screenItems.includes(id) ? setup.screenItems.filter((x) => x !== id) : [...setup.screenItems, id] });
+  const setItems = (assessmentId: string, on: boolean) => {
+    const ids = itemsOf(assessmentId).map((x) => x.block.id!);
     patch({ screenItems: on ? [...new Set([...setup.screenItems, ...ids])] : setup.screenItems.filter((x) => !ids.includes(x)) });
+  };
+  // A new grade starts with every tick box for that grade ticked.
+  const onGrade = (grade: ReportSetup["grade"]) => {
+    const next = { ...setup, grade };
+    patch({ grade, screenItems: [...new Set([...setup.screenItems, ...optional.filter((x) => tickShown(x, next)).map((x) => x.block.id!)])] });
   };
   const anyRatings = Object.values(setup.ratings).some((r) => Object.keys(r).length > 0);
   const clearFilled = () => {
@@ -108,119 +141,123 @@ function OtReportBuilder() {
     }
   };
 
-  // ---------- template edits ----------
-  const setBlockOverride = (sectionId: string, blockKey: string, o: BlockOverride | null) =>
-    setOverrides((cur) => {
-      const blocks = { ...cur.blocks };
-      const k = `${sectionId}/${blockKey}`;
-      if (o && Object.keys(o).length) blocks[k] = o;
-      else delete blocks[k];
-      return { ...cur, blocks };
-    });
-  const setSectionExamples = (sectionId: string, ex: string[]) =>
-    setOverrides((cur) => {
-      const sectionExamples = { ...cur.sectionExamples };
-      const orig = originals.find((x) => x.id === sectionId)?.examples ?? [];
-      if (JSON.stringify(ex) === JSON.stringify(orig)) delete sectionExamples[sectionId];
-      else sectionExamples[sectionId] = ex;
-      return { ...cur, sectionExamples };
-    });
-  const setList = (name: string, opts: string[] | null) =>
-    setOverrides((cur) => {
-      const lists = { ...cur.lists };
-      if (!opts || JSON.stringify(opts) === JSON.stringify(OPTION_LISTS[name]?.options)) delete lists[name];
-      else lists[name] = opts;
-      return { ...cur, lists };
-    });
-  const gradeScreen = (o: TemplateOverrides) => o.screen[setup.grade] ?? { hidden: [], added: [] };
-  const hideItem = (id: string) => {
-    setOverrides((cur) => {
-      const g = gradeScreen(cur);
-      const isCustom = g.added.some((i) => i.id === id);
-      const next = isCustom ? { hidden: g.hidden, added: g.added.filter((i) => i.id !== id) } : { hidden: [...g.hidden, id], added: g.added };
-      return { ...cur, screen: { ...cur.screen, [setup.grade]: next } };
-    });
-    patch({ screenItems: setup.screenItems.filter((x) => x !== id) });
+  // ---------- pack edits ----------
+  const setAssessments = (assessments: PackAssessment[]) => setPack({ ...pack, assessments });
+  const addAssessment = (label: string, layout: "" | GridDef["layout"]) => {
+    const id = newPackId(pack, "assessment");
+    const sectionId = newPackId(pack, "section");
+    const gridId = newPackId(pack, "grid");
+    const grid: GridDef | undefined =
+      layout === "byGroup"
+        ? {
+            id: gridId, title: "Rate each item", layout, blank: "[[ratings for this group]]",
+            levels: [
+              { value: "l1", label: "Independent", sentence: "The student is independent with {items}." },
+              { value: "l2", label: "Needs help", sentence: "Help is needed for {items}." },
+            ],
+            groups: [{ id: "group1", label: "Items", rows: [{ id: "item1", label: "the first item" }] }],
+          }
+        : layout === "byLevel"
+          ? {
+              id: gridId, title: "Choose a level for each item", layout, blank: "[[items at this level, or none]]", none: "None", allClear: "within the typical range across all areas",
+              levels: [
+                { value: "l1", label: "Typical", sentence: "{items}" },
+                { value: "l2", label: "Concern", sentence: "{items}", concern: true },
+              ],
+              groups: [{ id: "items", label: "Items", rows: [{ id: "item1", label: "the first item" }] }],
+            }
+          : undefined;
+    const blocks: PackBlock[] = [{ kind: "para", id: "intro", text: `The ${label} was completed [[how and by whom]]. {{student}} [[what the results showed]].` }];
+    if (grid) blocks.push({ kind: "grid", id: `grid-${gridId}`, grid: gridId });
+    const section: PackSection = { id: sectionId, title: label, blocks, examples: [], notesHint: "The results and what you observed." };
+    setAssessments([...pack.assessments, { id, label, sections: [section], ...(grid ? { grid } : {}) }]);
   };
-  const addItem = (item: Omit<ScreenItem, "id">) => {
-    const id = `custom-${Date.now().toString(36)}`;
-    setOverrides((cur) => {
-      const g = gradeScreen(cur);
-      return { ...cur, screen: { ...cur.screen, [setup.grade]: { hidden: g.hidden, added: [...g.added, { ...item, id }] } } };
-    });
-    patch({ screenItems: [...setup.screenItems, id] });
+  const removeAssessment = (a: PackAssessment) => {
+    if (confirmAction(`Remove the assessment “${a.label}” and its ${a.sections.length} section${a.sections.length === 1 ? "" : "s"}?`)) setAssessments(pack.assessments.filter((x) => x.id !== a.id));
   };
-  const restoreHiddenItems = () =>
-    setOverrides((cur) => {
-      const g = gradeScreen(cur);
-      return { ...cur, screen: { ...cur.screen, [setup.grade]: { hidden: [], added: g.added } } };
-    });
-  const showHiddenIn = (sectionId: string) =>
-    setOverrides((cur) => {
-      const blocks = { ...cur.blocks };
-      for (const [k, v] of Object.entries(blocks))
-        if (k.startsWith(`${sectionId}/`) && v.hidden) {
-          const { hidden: _h, ...rest } = v;
-          if (Object.keys(rest).length) blocks[k] = rest;
-          else delete blocks[k];
-        }
-      return { ...cur, blocks };
-    });
-  const setGrid = (id: string, grid: GridDef | null) =>
-    setOverrides((cur) => {
-      const grids = { ...cur.grids };
-      if (grid) grids[id] = grid;
-      else delete grids[id];
-      return { ...cur, grids };
-    });
-  const setTitle = (sectionId: string, title: string | null) =>
-    setOverrides((cur) => {
-      const titles = { ...cur.titles };
-      if (title) titles[sectionId] = title;
-      else delete titles[sectionId];
-      return { ...cur, titles };
-    });
-  const resetAllEdits = () => {
-    if (confirmAction("Remove all your template edits and go back to the original wording, samples, dropdowns, screen items, rating grids and titles?")) setOverrides(emptyOverrides());
+  const setGrid = (gridId: string, grid: GridDef) => setAssessments(pack.assessments.map((a) => (a.grid?.id === gridId ? { ...a, grid } : a)));
+
+  const applyBlockEdit = (sectionId: string, blockId: string, o: { text?: string; label?: string; examples?: string[]; hidden?: boolean }) =>
+    setPack(
+      updateBlock(pack, sectionId, blockId, (b) => {
+        if (o.hidden) return null;
+        if (b.kind === "grid") return b;
+        const next = { ...b } as Block & { label?: string };
+        if (o.text !== undefined) next.text = o.text;
+        if (o.label !== undefined) next.label = o.label;
+        if (o.examples !== undefined) next.examples = o.examples;
+        return next;
+      }),
+    );
+  const addBlock = (sectionId: string, b: { kind: Block["kind"]; label?: string; text: string; examples: string[] }) => {
+    const id = newPackId(pack, "p");
+    const block = { kind: b.kind, id, text: b.text, ...(b.label ? { label: b.label } : {}), ...(b.examples.length ? { examples: b.examples } : {}) } as Block;
+    setPack(updateSection(pack, sectionId, (s) => ({ ...s, blocks: [...s.blocks, block] })));
   };
-  const hiddenScreenCount = gradeScreen(overrides).hidden.length;
+  const moveSection = (sectionId: string, delta: number) => {
+    const found = findSection(pack, sectionId);
+    if (!found) return;
+    if (found.assessment) setAssessments(pack.assessments.map((a) => (a === found.assessment ? { ...a, sections: moveInList(a.sections, sectionId, delta) } : a)));
+    else {
+      // Sections before and after the assessments are ordered among themselves.
+      const place = found.section.place ?? "after";
+      const same = pack.sections.filter((s) => (s.place ?? "after") === place);
+      const moved = moveInList(same, sectionId, delta);
+      let i = 0;
+      setPack({ ...pack, sections: pack.sections.map((s) => ((s.place ?? "after") === place ? moved[i++] : s)) });
+    }
+  };
+  const discard = () => {
+    if (confirmAction("Delete this whole template and go back to the start choices? Filled blanks are cleared too.")) {
+      setValues({});
+      onDiscard();
+    }
+  };
 
   const editTarget = (() => {
     if (!editing) return null;
-    const section = sections.find((x) => x.id === editing.sectionId);
-    const orig = originals.find((x) => x.id === editing.sectionId);
-    if (!section || !orig) return null;
-    const find = (blocks: Block[]) => blocks.find((b, i) => blockKeyOf(b, i) === editing.blockKey);
-    const current = find(section.blocks);
-    const original = find(orig.blocks);
-    if (!current || !original) return null;
-    return { section, current, original };
+    const found = findSection(pack, editing.sectionId);
+    const built = sections.find((s) => s.id === editing.sectionId)?.blocks.find((b) => b.id === editing.blockId);
+    const rawId = built?.sourceId ?? editing.blockId;
+    const block = found?.section.blocks.find((b) => b.id === rawId);
+    if (!found || !block || block.kind === "grid") return null;
+    return { section: found.section, block, built: built ?? block, rawId };
   })();
-
-  const groups: { id: "classroom" | "supporting" | "paragraph"; label: string }[] = [
-    { id: "classroom", label: "Classroom skills" },
-    { id: "supporting", label: "Supporting skills" },
-    { id: "paragraph", label: "Sections" },
-  ];
-  const spmGrid = gridFor("spm2", overrides);
-  const spmSet = gridRatedCount(spmGrid, setup.ratings.spm2 ?? {});
+  const settingsTarget = sectionSettings && sectionSettings !== "new" ? findSection(pack, sectionSettings) : null;
+  const conditionText = (s: PackSection) => {
+    const parts: string[] = [];
+    if (s.when?.reportType) parts.push(s.when.reportType === "evaluation" ? "evaluation" : "annual review");
+    if (s.when?.concerns !== undefined) parts.push(s.when.concerns ? "with concerns" : "no concerns");
+    if (s.when?.grades) parts.push(`grades ${s.when.grades.join(", ")}`);
+    return parts.join(" · ");
+  };
 
   return (
     <div className="report">
       <section className="card report-setup" aria-label="Report setup">
         <h2>1. Set up the report</h2>
-
-        <SetupBasics setup={setup} patch={patch} onGrade={(g) => setSetup((s) => withGrade(s, g, overrides))} />
+        <SetupBasics setup={setup} patch={patch} onGrade={onGrade} />
 
         <h3>What did you do?</h3>
+        {pack.assessments.length === 0 && <p className="hint">No assessments yet.{editMode ? "" : " Turn on Edit template to add some."}</p>}
         <ul className="assess-list">
-          {ASSESSMENTS.map((a) => (
+          {pack.assessments.map((a, i) => (
             <li key={a.id}>
-              <label className="check">
-                <input type="checkbox" checked={setup.assessments[a.id]} onChange={(e) => patch({ assessments: { ...setup.assessments, [a.id]: e.target.checked } })} />
-                {a.label}
-              </label>
-              {a.id === "teacher" && setup.assessments.teacher && (
+              <span className="screen-item-row">
+                <label className="check">
+                  <input type="checkbox" checked={assessmentOn(setup, a.id)} onChange={(e) => patch({ assessments: { ...setup.assessments, [a.id]: e.target.checked } })} />
+                  {a.label}
+                </label>
+                {editMode && (
+                  <span className="row gap">
+                    <button type="button" className="btn btn-xs" onClick={() => setAssessmentRename(a.id)} aria-label={`Rename ${a.label}`}>✎</button>
+                    <button type="button" className="btn btn-xs" disabled={i === 0} onClick={() => setAssessments(moveInList(pack.assessments, a.id, -1))} aria-label={`Move ${a.label} up`}>↑</button>
+                    <button type="button" className="btn btn-xs" disabled={i === pack.assessments.length - 1} onClick={() => setAssessments(moveInList(pack.assessments, a.id, 1))} aria-label={`Move ${a.label} down`}>↓</button>
+                    <button type="button" className="btn btn-xs btn-danger" onClick={() => removeAssessment(a)} aria-label={`Remove ${a.label}`}>✕</button>
+                  </span>
+                )}
+              </span>
+              {uses.teacherAreas.has(a.id) && assessmentOn(setup, a.id) && (
                 <span className="row gap wrap teacher-areas">
                   <span className="hint">Concerns in:</span>
                   {TEACHER_AREAS.map((t) => (
@@ -230,105 +267,92 @@ function OtReportBuilder() {
                   ))}
                 </span>
               )}
-              {a.id === "screen" && setup.assessments.screen && (
+              {assessmentOn(setup, a.id) && itemsOf(a.id).length > 0 && (
                 <div className="screen-items">
-                  {borrowed && <p className="hint">There's no 9–12 screen template yet, so the 6–8 items are used.</p>}
-                  {editMode && hiddenScreenCount > 0 && (
-                    <p className="hint">
-                      {hiddenScreenCount} built-in item{hiddenScreenCount === 1 ? " is" : "s are"} hidden for this grade.{" "}
-                      <button type="button" className="link" onClick={restoreHiddenItems}>Show them again</button>
-                    </p>
-                  )}
-                  {groups.map((g) => {
-                    const list = items.filter((i) => i.group === g.id);
-                    if (!list.length) return null;
-                    return (
-                      <div key={g.id} className="screen-group">
-                        <div className="screen-group-head">
-                          <span>{g.label}</span>
-                          <span className="hint">
-                            <button type="button" className="link" onClick={() => setGroupItems(g.id, true)}>all</button> ·{" "}
-                            <button type="button" className="link" onClick={() => setGroupItems(g.id, false)}>none</button>
-                          </span>
-                        </div>
-                        {list.map((i) => (
-                          <span key={i.id} className="screen-item-row">
-                            <label className="check">
-                              <input type="checkbox" checked={setup.screenItems.includes(i.id)} onChange={() => toggleItem(i.id)} /> {i.label}
-                              {i.id.startsWith("custom-") && <span className="badge badge-tag">yours</span>}
-                            </label>
-                            {editMode && (
-                              <button type="button" className="btn btn-xs btn-danger" title={i.id.startsWith("custom-") ? "Delete this item" : "Hide this item for this grade"} onClick={() => hideItem(i.id)}>
-                                ✕
-                              </button>
-                            )}
-                          </span>
-                        ))}
-                        {editMode && (
-                          <button type="button" className="link add-item" onClick={() => setAdding(g.id)}>
-                            + add {g.id === "paragraph" ? "a section" : "an item"}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
+                  <div className="screen-group">
+                    <div className="screen-group-head">
+                      <span>Items done</span>
+                      <span className="hint">
+                        <button type="button" className="link" onClick={() => setItems(a.id, true)}>all</button> ·{" "}
+                        <button type="button" className="link" onClick={() => setItems(a.id, false)}>none</button>
+                      </span>
+                    </div>
+                    {itemsOf(a.id).map((x) => (
+                      <span key={x.block.id} className="screen-item-row">
+                        <label className="check">
+                          <input type="checkbox" checked={setup.screenItems.includes(x.block.id!)} onChange={() => toggleItem(x.block.id!)} /> {itemLabel(x.block)}
+                        </label>
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
-              {a.id === "spm2" && setup.assessments.spm2 && (
+              {a.grid && assessmentOn(setup, a.id) && (
                 <RatingPanel
-                  grid={spmGrid}
-                  edited={!!overrides.grids.spm2}
-                  ratings={setup.ratings.spm2 ?? {}}
-                  onChange={(r) => patch({ ratings: { ...setup.ratings, spm2: r } })}
-                  onEdit={editMode ? () => setGridEditing("spm2") : undefined}
-                  hint="The result lines fill in once every scale is set. The evaluation summary uses them too."
+                  grid={a.grid}
+                  edited={false}
+                  ratings={setup.ratings[a.grid.id] ?? {}}
+                  onChange={(r) => patch({ ratings: { ...setup.ratings, [a.grid!.id]: r } })}
+                  onEdit={editMode ? () => setGridEditing(a.grid!.id) : undefined}
+                  hint={a.grid.layout === "byGroup" ? "Each group's sentences are written from these levels." : "The lines fill in once every item is set."}
                 />
               )}
             </li>
           ))}
         </ul>
-
-        {setup.concerns && (
+        {setup.concerns && (uses.serviceType || uses.objectives || uses.goalAreas.length > 0) && (
           <>
             <h3>Services and goal</h3>
-            <div className="setup-row">
-              <span className="setup-label">Service</span>
-              <span className="seg">
-                <button type="button" className={setup.serviceType === "direct" ? "on" : ""} onClick={() => patch({ serviceType: "direct" })}>Direct</button>
-                <button type="button" className={setup.serviceType === "indirect" ? "on" : ""} onClick={() => patch({ serviceType: "indirect" })}>Indirect</button>
-              </span>
-            </div>
-            <div className="setup-row">
-              <span className="setup-label">Objectives</span>
-              <span className="seg">
-                {[2, 3, 4].map((n) => (
-                  <button key={n} type="button" className={setup.objectives === n ? "on" : ""} onClick={() => patch({ objectives: n })}>
-                    {n}
-                  </button>
-                ))}
-              </span>
-            </div>
-            <div className="setup-row">
-              <span className="setup-label">Standards</span>
-              <span className="row gap wrap">
-                {GOAL_AREAS.map((g) => (
-                  <label key={g.id} className="check">
-                    <input
-                      type="checkbox"
-                      checked={setup.goalAreas.includes(g.id)}
-                      onChange={(e) => patch({ goalAreas: e.target.checked ? [...setup.goalAreas, g.id] : setup.goalAreas.filter((x) => x !== g.id) })}
-                    />{" "}
-                    {g.label}
-                  </label>
-                ))}
-              </span>
-            </div>
+            {uses.serviceType && (
+              <div className="setup-row">
+                <span className="setup-label">Service</span>
+                <span className="seg">
+                  <button type="button" className={setup.serviceType === "direct" ? "on" : ""} onClick={() => patch({ serviceType: "direct" })}>Direct</button>
+                  <button type="button" className={setup.serviceType === "indirect" ? "on" : ""} onClick={() => patch({ serviceType: "indirect" })}>Indirect</button>
+                </span>
+              </div>
+            )}
+            {uses.objectives && (
+              <div className="setup-row">
+                <span className="setup-label">Objectives</span>
+                <span className="seg">
+                  {[2, 3, 4].map((n) => (
+                    <button key={n} type="button" className={setup.objectives === n ? "on" : ""} onClick={() => patch({ objectives: n })}>
+                      {n}
+                    </button>
+                  ))}
+                </span>
+              </div>
+            )}
+            {uses.goalAreas.length > 0 && (
+              <div className="setup-row">
+                <span className="setup-label">Standards</span>
+                <span className="row gap wrap">
+                  {uses.goalAreas.map((g) => (
+                    <label key={g} className="check">
+                      <input
+                        type="checkbox"
+                        checked={setup.goalAreas.includes(g)}
+                        onChange={(e) => patch({ goalAreas: e.target.checked ? [...setup.goalAreas, g] : setup.goalAreas.filter((x) => x !== g) })}
+                      />{" "}
+                      {GOAL_AREA_LABEL[g]}
+                    </label>
+                  ))}
+                </span>
+              </div>
+            )}
           </>
+        )}
+        {editMode && (
+          <p className="row gap wrap">
+            <button type="button" className="btn btn-sm" onClick={() => setAddingAssessment(true)}>+ Add an assessment</button>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={discard}>Delete this template…</button>
+          </p>
         )}
       </section>
 
       <ReportOutput
-        title={OT_REPORT_TITLE[setup.reportType]}
+        title={pack.titles[setup.reportType]}
         sections={sections}
         reportType={setup.reportType}
         grade={setup.grade}
@@ -337,88 +361,135 @@ function OtReportBuilder() {
         values={values}
         setValue={setValue}
         filledCount={filledCount}
-        anyRatings={anyRatings || spmSet > 0}
+        anyRatings={anyRatings}
         clearFilled={clearFilled}
-        lists={(name) => listFor(name, overrides)}
+        lists={(name) => pack.lists[name]}
         editMode={editMode}
         setEditMode={setEditMode}
         flash={flash}
         say={say}
         edit={{
-          hasEdits: hasOverrides(overrides),
-          resetAll: resetAllEdits,
+          hasEdits: false,
+          resetAll: () => {},
           banner: (
             <>
-              Click ✎ beside a paragraph to change its wording, blanks or sample sentences, or to hide it; beside a title to rename the section; beside
-              a line written from ratings (SPM-2) to change that assessment's items, levels and sentences. Your edits are saved in this browser and
+              This template is yours: click ✎ beside a paragraph to change its wording, blanks or sample sentences, or to delete it; beside a title
+              for the section's name, place and when it appears; beside a line written from ratings to change that assessment's items, levels and
+              sentences. Use the buttons under each section to add paragraphs, and at the end to add sections. Everything is saved in this browser and
               included in Settings → Backup.
             </>
           ),
-          onEditBlock: (sectionId, blockKey) => setEditing({ sectionId, blockKey }),
-          onEditTitle: setTitleEditing,
+          onEditBlock: (sectionId, blockId) => setEditing({ sectionId, blockId }),
+          onEditTitle: setSectionSettings,
           onEditGrid: setGridEditing,
           onEditList: setListEditing,
           sectionTools: (s) => {
-            const hidden = (originals.find((o) => o.id === s.id)?.blocks.length ?? 0) - s.blocks.length;
-            return hidden > 0 ? (
-              <span className="hint hidden-note">
+            const found = findSection(pack, s.id);
+            if (!found) return null;
+            const list = found.assessment ? found.assessment.sections : pack.sections.filter((x) => (x.place ?? "after") === (found.section.place ?? "after"));
+            const i = list.findIndex((x) => x.id === s.id);
+            const cond = conditionText(found.section);
+            return (
+              <span className="hint hidden-note section-tools">
                 {" "}
-                {hidden} hidden · <button type="button" className="link" onClick={() => showHiddenIn(s.id)}>show</button>
+                {found.assessment && <span className="badge badge-tag">{found.assessment.label}</span>}
+                {cond && <span className="badge badge-tag">{cond}</span>}
+                <button type="button" className="btn btn-xs" disabled={i <= 0} onClick={() => moveSection(s.id, -1)} aria-label={`Move section ${s.title} up`}>↑</button>
+                <button type="button" className="btn btn-xs" disabled={i < 0 || i >= list.length - 1} onClick={() => moveSection(s.id, 1)} aria-label={`Move section ${s.title} down`}>↓</button>
+                <button type="button" className="link" onClick={() => setAddingBlock(s.id)}>+ paragraph</button>
               </span>
-            ) : null;
+            );
           },
-          listNames: Object.keys(OPTION_LISTS),
-          listEdited: (name) => !!overrides.lists[name],
+          afterSections: (
+            <p>
+              <button type="button" className="btn btn-sm" onClick={() => setSectionSettings("new")}>+ Add a section</button>
+            </p>
+          ),
+          listNames,
+          listEdited: () => false,
         }}
       />
 
       {editTarget && editing && (
         <EditBlockModal
           sectionTitle={editTarget.section.title}
-          original={editTarget.original}
-          current={editTarget.current}
-          override={overrides.blocks[`${editing.sectionId}/${editing.blockKey}`]}
-          examplesFromSection={!editTarget.original.examples}
+          original={editTarget.built}
+          current={editTarget.built}
+          examplesFromSection={!editTarget.block.examples}
           sectionExamples={editTarget.section.examples}
-          listNames={Object.keys(OPTION_LISTS)}
-          onSave={(o) => setBlockOverride(editing.sectionId, editing.blockKey, o)}
-          onSaveSectionExamples={(ex) => setSectionExamples(editing.sectionId, ex)}
-          onReset={() => setBlockOverride(editing.sectionId, editing.blockKey, null)}
+          listNames={listNames}
+          hideLabel="Delete this paragraph"
+          onSave={(o) => applyBlockEdit(editing.sectionId, editTarget.rawId, o)}
+          onSaveSectionExamples={(ex) => setPack(updateSection(pack, editing.sectionId, (s) => ({ ...s, examples: ex })))}
+          onReset={() => {}}
           onClose={() => setEditing(null)}
         />
       )}
-      {listEditing && (
+      {addingBlock && (
+        <AddBlockModal
+          sectionTitle={findSection(pack, addingBlock)?.section.title ?? ""}
+          listNames={listNames}
+          onAdd={(b) => addBlock(addingBlock, b)}
+          onClose={() => setAddingBlock(null)}
+        />
+      )}
+      {sectionSettings === "new" && (
+        <SectionSettingsModal
+          inAssessment={false}
+          onSave={(s) => setPack({ ...pack, sections: [...pack.sections, { id: newPackId(pack, "section"), title: s.title, place: s.place, ...(s.when ? { when: s.when } : {}), ...(s.notesHint ? { notesHint: s.notesHint } : {}), blocks: [], examples: [] }] })}
+          onClose={() => setSectionSettings(null)}
+        />
+      )}
+      {settingsTarget && sectionSettings && (
+        <SectionSettingsModal
+          initial={{ title: settingsTarget.section.title, place: settingsTarget.section.place ?? "after", when: settingsTarget.section.when, notesHint: settingsTarget.section.notesHint ?? "" }}
+          inAssessment={!!settingsTarget.assessment}
+          onSave={(s) =>
+            setPack(
+              updateSection(pack, sectionSettings, (sec) => {
+                const next: PackSection = { ...sec, title: s.title };
+                if (!settingsTarget.assessment) next.place = s.place;
+                if (s.when) next.when = s.when;
+                else delete next.when;
+                if (s.notesHint) next.notesHint = s.notesHint;
+                else delete next.notesHint;
+                return next;
+              }),
+            )
+          }
+          onDelete={() => setPack(updateSection(pack, sectionSettings, () => null))}
+          onClose={() => setSectionSettings(null)}
+        />
+      )}
+      {assessmentRename && (
+        <TitleEditorModal
+          original={pack.assessments.find((a) => a.id === assessmentRename)?.label ?? ""}
+          current={pack.assessments.find((a) => a.id === assessmentRename)?.label ?? ""}
+          onSave={(t) => {
+            if (t) setAssessments(pack.assessments.map((a) => (a.id === assessmentRename ? { ...a, label: t } : a)));
+          }}
+          onClose={() => setAssessmentRename(null)}
+        />
+      )}
+      {addingAssessment && <AddAssessmentModal onAdd={addAssessment} onClose={() => setAddingAssessment(false)} />}
+      {listEditing && pack.lists[listEditing] && (
         <ListEditorModal
           name={listEditing}
-          options={listFor(listEditing, overrides)?.options ?? []}
-          edited={!!overrides.lists[listEditing]}
-          onSave={(opts) => setList(listEditing, opts)}
-          onReset={() => setList(listEditing, null)}
+          options={pack.lists[listEditing].options}
+          edited={false}
+          onSave={(opts) => setPack({ ...pack, lists: { ...pack.lists, [listEditing]: { ...pack.lists[listEditing], options: opts } } })}
+          onReset={() => {}}
           onClose={() => setListEditing(null)}
         />
       )}
-      {gridEditing && BUILT_IN_GRIDS[gridEditing] && (
+      {gridEditing && grids[gridEditing] && (
         <GridEditorModal
-          original={BUILT_IN_GRIDS[gridEditing]}
-          current={gridFor(gridEditing, overrides)}
-          onSave={(g) => setGrid(gridEditing, g)}
+          original={grids[gridEditing]}
+          current={grids[gridEditing]}
+          onSave={(g) => {
+            if (g) setGrid(gridEditing, g);
+          }}
           onClose={() => setGridEditing(null)}
-        />
-      )}
-      {titleEditing && (
-        <TitleEditorModal
-          original={originals.find((s) => s.id === titleEditing)?.title ?? ""}
-          current={sections.find((s) => s.id === titleEditing)?.title ?? ""}
-          onSave={(t) => setTitle(titleEditing, t)}
-          onClose={() => setTitleEditing(null)}
-        />
-      )}
-      {adding && (
-        <AddScreenItemModal
-          gradeLabel={GRADE_GROUPS.find((g) => g.id === setup.grade)?.label ?? ""}
-          defaultGroup={adding}
-          onAdd={addItem}
-          onClose={() => setAdding(null)}
         />
       )}
     </div>
@@ -426,7 +497,7 @@ function OtReportBuilder() {
 }
 
 /** Report type, result, grade and pronoun: the same for every template. */
-export function SetupBasics({ setup, patch, onGrade }: { setup: ReportSetup; patch: (p: Partial<ReportSetup>) => void; onGrade: (g: ReportSetup["grade"]) => void }) {
+function SetupBasics({ setup, patch, onGrade }: { setup: ReportSetup; patch: (p: Partial<ReportSetup>) => void; onGrade: (g: ReportSetup["grade"]) => void }) {
   return (
     <>
       <div className="setup-row">

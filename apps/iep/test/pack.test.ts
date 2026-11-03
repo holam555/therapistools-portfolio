@@ -1,112 +1,44 @@
 import { describe, expect, it } from "vitest";
-import { otReportSections } from "../src/report/ot-pack";
-import { emptyOverrides, type TemplateOverrides } from "../src/report/overrides";
-import {
-  blankPack, conditionHolds, findSection, moveInList, newPackId, normalizePack, optionalBlocks, packFromOt, packSections, packUses, updateBlock, updateSection, type TemplatePack,
-} from "../src/report/pack";
+import { blankPack, conditionHolds, findSection, moveInList, newPackId, normalizePack, optionalBlocks, packSections, packUses, updateBlock, updateSection, type TemplatePack } from "../src/report/pack";
+import { premadePack } from "../src/report/premade";
 import { sectionText } from "../src/report/render";
-import { SPM_SCALES, spmKey } from "../src/report/spm";
-import { defaultSetup, withGrade } from "../src/report/setup";
-import { GRADE_GROUPS, type ReportSetup } from "../src/report/types";
+import { defaultSetup } from "../src/report/setup";
+import type { ReportSetup } from "../src/report/types";
 import { makeBackup, parseBackup, serializeBackup } from "../src/model/storage";
 import { starterLibrary } from "../src/model/defaults";
 
 const texts = (sections: ReturnType<typeof packSections>, pronoun: "he" | "she") => sections.map((s) => sectionText(s, pronoun));
 
-/** Every choice the OT template reacts to, with and without a writer's edits. */
-function otMatrix(o?: TemplateOverrides): ReportSetup[] {
-  const out: ReportSetup[] = [];
-  const spm = Object.fromEntries(SPM_SCALES.map((s) => [spmKey(s), "typical"]));
-  spm[spmKey("Vision")] = "severe";
-  for (const g of GRADE_GROUPS)
-    for (const reportType of ["evaluation", "annual"] as const)
-      for (const concerns of [true, false])
-        for (const teacherAreas of [{ fine: true, gross: true, sensory: true }, { fine: false, gross: false, sensory: false }, { fine: false, gross: true, sensory: false }, { fine: true, gross: false, sensory: true }])
-          for (const serviceType of ["direct", "indirect"] as const)
-            for (const objectives of [2, 4])
-              for (const goalAreas of [["writing", "cutting", "selfcare"], [], ["selfcare"]] as ReportSetup["goalAreas"][])
-                for (const assessments of [{ teacher: true, screen: true, beery: true, spm2: true }, { teacher: true, screen: true, beery: false, spm2: false }, { teacher: false, screen: false, beery: true, spm2: true }])
-                  for (const items of ["all", "half", "none"]) {
-                    const base = withGrade(defaultSetup(), g.id, o);
-                    const screenItems = items === "all" ? base.screenItems : items === "half" ? base.screenItems.filter((_, i) => i % 2 === 0) : [];
-                    out.push({ ...base, reportType, concerns, teacherAreas, serviceType, objectives, goalAreas, assessments, screenItems, pronoun: items === "half" ? "she" : "he", ratings: { spm2: spm } });
-                  }
-  return out;
-}
-const full = (sections: ReturnType<typeof packSections>, pronoun: "he" | "she") => sections.map((s) => [s.id, s.title, sectionText(s, pronoun), ...s.examples, ...s.blocks.flatMap((b) => b.examples ?? [])].join("\n"));
+describe("a ready-made pack", () => {
+  const pack = premadePack("ot");
 
-describe("a pack copied from the OT template", () => {
-  const pack = packFromOt("Physical therapy");
-
-  it("reads exactly like the OT report for every setup, with ratings, ticks, objectives, standards and services", () => {
-    for (const setup of otMatrix()) expect(full(packSections(pack, setup), setup.pronoun), JSON.stringify(setup)).toEqual(full(otReportSections(setup), setup.pronoun));
-  });
-
-  it("carries a writer's edits: wording, hidden and added items, titles, lists and the grid", () => {
-    const o = emptyOverrides();
-    o.blocks["screen/g25-grasp"] = { text: "{{They}} holds the pencil [[how]].", label: "Grasp", examples: ["He held it well."] };
-    o.blocks["screen/g25-dominance"] = { hidden: true };
-    o.blocks["summary/sensory"] = { text: "Sensory results from the {assessments}: {results}. {{They}} [[next step]]." };
-    o.blocks["goal/goal-frame"] = { text: "{{student}} will meet [[number met::objectivesMet]] of these {count} objectives:" };
-    o.blocks["next-steps/closing"] = { hidden: true };
-    o.sectionExamples.impact = ["Her disability affects her writing."];
-    o.lists.minutes = ["45 minutes monthly"];
-    o.titles.spm2 = "Sensory measure";
-    o.screen.k1 = { hidden: ["k1-strength"], added: [{ id: "custom-1", label: "Keyboarding", group: "classroom", opener: "{{They}} [[typing]].", examples: ["She typed well."] }] };
-    const edited = packFromOt("Occupational Therapy", o);
-    for (const setup of otMatrix(o)) expect(full(packSections(edited, setup), setup.pronoun), JSON.stringify(setup)).toEqual(full(otReportSections(setup, o), setup.pronoun));
-    expect(edited.titles).toEqual({ evaluation: "Occupational Therapy Evaluation Report", annual: "Occupational Therapy Annual Review" });
-    expect(edited.lists.minutes.options).toEqual(["45 minutes monthly"]);
-    expect(optionalBlocks(edited).some((x) => x.block.id === "custom-1")).toBe(true);
-    expect(optionalBlocks(edited).some((x) => x.block.id === "k1-strength")).toBe(false);
-  });
-
-  it("carries the assessments, their grid, tick boxes, options and dropdown lists", () => {
-    expect(pack.assessments.map((a) => a.id)).toEqual(["teacher", "screen", "beery", "spm2"]);
-    expect(pack.assessments.find((a) => a.id === "spm2")!.grid!.groups[0].rows.length).toBe(9);
-    const screen = pack.assessments.find((a) => a.id === "screen")!.sections[0];
-    expect(screen.id).toBe("screen");
-    expect(optionalBlocks(pack).filter((x) => x.assessment.id === "screen").length).toBe(11 + 16 + 3);
-    expect(screen.blocks.find((b) => b.id === "g68-typing")).toMatchObject({ optional: true, when: { grades: ["g68", "g912"] } });
+  it("says which setup choices it reacts to", () => {
     const uses = packUses(pack);
-    expect(uses.teacherAreas.has("teacher")).toBe(true);
+    expect(uses.teacherAreas.size).toBe(0);
     expect(uses.serviceType).toBe(true);
     expect(uses.objectives).toBe(true);
     expect(uses.goalAreas).toEqual(["writing", "cutting", "selfcare"]);
-    expect(packSections(pack, defaultSetup()).find((s) => s.id === "teacher")!.examples.length).toBe(3);
-    expect(pack.lists.grasp.options).toContain("tripod");
-    expect(pack.titles).toEqual({ evaluation: "Physical therapy Evaluation Report", annual: "Physical therapy Annual Review" });
+    expect(optionalBlocks(pack).filter((x) => x.assessment.id === "screen").length).toBe(9 + 11 + 9);
+    expect(optionalBlocks(pack).every((x) => x.section.when?.grades)).toBe(true);
   });
 
-  it("writes rating lines from the pack's own grids", () => {
-    const all = Object.fromEntries(["Social Participation", "Vision", "Hearing", "Touch", "Taste and Smell", "Body Awareness", "Balance and Motion", "Planning and Ideas", "Sensory Total"].map((s) => [`scales.${s}`, "typical"]));
-    const setup: ReportSetup = { ...defaultSetup(), ratings: { spm2: { ...all, "scales.Vision": "severe" } } };
-    const text = texts(packSections(pack, setup), "he").join("\n");
-    expect(text).toContain("Severe Difficulties: Vision");
-    expect(text).toContain("Moderate Difficulties: None");
-    expect(texts(packSections(pack, defaultSetup()), "he").join("\n")).toContain("Typical Processing: [[scales at this level, or none]]");
-  });
-
-  it("drops an assessment that was not done", () => {
-    const setup: ReportSetup = { ...defaultSetup(), assessments: { beery: false, spm2: false } };
-    expect(packSections(pack, setup).map((s) => s.id)).toEqual(["teacher", "screen", "summary", "next-steps", "impact", "service", "goal"]);
-    expect(packSections(pack, { ...setup, concerns: false }).map((s) => s.id)).toEqual(["teacher", "screen", "summary"]);
-  });
-
-  it("survives storage with its conditions, tick boxes and repeats", () => {
+  it("survives storage and the backup file with its conditions, tick boxes and repeats", () => {
     const back = normalizePack(JSON.parse(JSON.stringify(pack)))!;
     expect(back).toEqual(pack);
     const goal = back.sections.find((s) => s.id === "goal")!;
     expect(goal.blocks.find((b) => b.id === "objective")).toMatchObject({ repeat: "objectives" });
     expect(goal.blocks.find((b) => b.id === "standard-writing")).toMatchObject({ when: { goalArea: "writing" } });
     const service = back.sections.find((s) => s.id === "service")!;
-    expect(service.blocks.map((b) => b.kind !== "grid" && b.when?.serviceType)).toEqual(["direct", "indirect"]);
+    expect(service.blocks.map((b) => b.kind !== "grid" && b.when?.serviceType)).toEqual([undefined, "direct", "indirect", undefined]);
+    const file = parseBackup(serializeBackup(makeBackup(starterLibrary(), [], "ot", pack)));
+    expect(normalizePack(file.pack)).toEqual(pack);
+    expect(file).not.toHaveProperty("template");
   });
 
-  it("survives the backup file and storage unchanged", () => {
-    const back = parseBackup(serializeBackup(makeBackup(starterLibrary(), [], "pt", undefined, pack)));
-    expect(normalizePack(back.pack)).toEqual(pack);
-    expect(normalizePack(JSON.parse(JSON.stringify(pack)))).toEqual(pack);
+  it("ignores the retired OT edits in an old backup file", () => {
+    const old = parseBackup(JSON.stringify({ app: "easyiep", version: 1, exportedAt: "", library: starterLibrary(), recipes: [], template: { version: 1, blocks: {} } }));
+    expect(old).not.toHaveProperty("template");
+    expect(old).not.toHaveProperty("pack");
   });
 });
 

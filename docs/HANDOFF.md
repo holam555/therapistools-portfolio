@@ -70,7 +70,7 @@ to Vercel, so there are no old addresses to redirect.
   update it with any change.
 - **Why accounts (owner, 2026-11-02):** the owner's own template holds their
   district wording and should live in their account, not in the code that
-  every visitor gets; the public built-in template stays fictional. The owner
+  every visitor gets; the public sample templates stay fictional. The owner
   chose a hosted service (they have used Supabase before) over running an
   account server on the homelab box.
 - **AI use in the IEP Writer:** the tool never calls an AI. It builds one
@@ -98,19 +98,19 @@ to Vercel, so there are no old addresses to redirect.
     including every assessment's items, levels and sentences (rating grids)
     and section titles. The owner asked for this because a template read
     from a document by AI may be wrong, so everything must be correctable.
-  - The built-in OT template is in the code, so every visitor gets it; edits
-    and own templates stay in that person's browser and backup file, and in
-    their account if they sign in (ACCOUNTS.md).
-- **Disciplines:** the IEP Writer asks for one. OT uses the built-in
-  template; every other discipline starts a template pack on the Report tab
-  from a pre-made generic sample (`src/report/premade/`, added 2026-11-03),
-  from their own document, or blank. The owner decided other disciplines
-  must **not** copy the OT template, so the samples were written fresh.
-  The older Library, Import, Builder and Output tabs still exist and are due
-  to retire.
-- **The built-in OT wording** was the owner's own until 2026-11-03; it is now
-  a generic sample, and the owner's wording lives in their account
-  (ACCOUNTS.md). The owner's `IEP template.docx` at the repository root is
+  - Templates stay in that person's browser and backup file, and in their
+    account if they sign in (ACCOUNTS.md). Nothing in the code is anyone's
+    template.
+- **Disciplines:** the IEP Writer asks for one. Every discipline, OT
+  included, starts a template pack on the Report tab from a pre-made generic
+  sample (`src/report/premade/`, added 2026-11-03), from their own document,
+  or blank. The owner decided the samples must **not** copy their district
+  form, so each was written fresh; the OT sample keeps the usual section
+  headings with its own content underneath. The older Library, Import,
+  Builder and Output tabs still exist and are due to retire.
+- **The owner's OT wording** was the built-in template until 2026-11-03; it
+  is now a pack of their own in their browser and account (ACCOUNTS.md), and
+  the code holds only the generic sample. The owner's `IEP template.docx` at the repository root is
   git-ignored on purpose; never commit it. The repository is public, so every sample
   sentence, starter-library sentence and test fixture in the code is
   fictional, written on 2026-10-26 to replace the owner's real examples.
@@ -121,14 +121,15 @@ to Vercel, so there are no old addresses to redirect.
 0. **Accounts are live and the owner's template is in their account**
    (2026-11-03): Supabase project, migration, custom SMTP, email templates,
    Google sign-in, `apps/iep/.env` and the publish script on the box are
-   all done ([ACCOUNTS.md](ACCOUNTS.md)). The built-in OT template is now a
-   generic sample; the owner's wording exists only in their browser, backup
-   file and account. Two generated lines (the summary's sensory sentence,
-   the goal's first line) could not be carried over and use the generic
-   wording; they became editable the same day (pattern with slots). Next:
-   the OT template becomes a pack the owner owns (`report/adopt.ts`), so the
-   built-in OT template can be rewritten in a different shape; then the old
-   OT code template, overrides layer and freeze retire.
+   all done ([ACCOUNTS.md](ACCOUNTS.md)). The same day the owner's OT
+   template became a pack of their own (confirmed saved in their account),
+   the old OT code template, overrides layer, freeze and adoption retired,
+   and a brand-new generic OT sample pack took their place. Two of the
+   owner's lines (the summary's sensory sentence, the goal's first line)
+   could not be carried over and hold generic wording; the owner can retype
+   them in Edit template. Backup files from before 2026-11-03 carry the
+   template in the old form (`template`), which is now ignored: the owner
+   should export a fresh backup.
 1. **Report templates for other disciplines** (plan agreed with the owner on
    2026-10-26). A new user chooses one of three starts: blank, a pre-made
    template (OT), or their own document. Steps, each shipped on its own:

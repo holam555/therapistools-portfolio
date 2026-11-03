@@ -6,7 +6,7 @@ import { parseBlank } from "../src/report/options";
 import { normalizePack, packGrids, packSections, type PackSection, type TemplatePack } from "../src/report/pack";
 import { PREMADE_DISCIPLINES, premadePack, premadeStrings } from "../src/report/premade";
 import { sectionText } from "../src/report/render";
-import { defaultSetup, withGrade } from "../src/report/setup";
+import { defaultSetup } from "../src/report/setup";
 import { GRADE_GROUPS, type ReportSetup } from "../src/report/types";
 
 // The ready-made packs are template wording only: no student, no names, no
@@ -19,7 +19,7 @@ function allSetups(): ReportSetup[] {
   for (const g of GRADE_GROUPS)
     for (const reportType of ["evaluation", "annual"] as const)
       for (const concerns of [true, false])
-        for (const pronoun of ["he", "she"] as const) out.push({ ...withGrade(defaultSetup(), g.id), reportType, concerns, pronoun });
+        for (const pronoun of ["he", "she"] as const) out.push({ ...defaultSetup(g.id), reportType, concerns, pronoun });
   return out;
 }
 
@@ -75,7 +75,7 @@ describe.each(PREMADE_DISCIPLINES.map((d) => [d] as [DisciplineId]))("ready-made
 
   it("builds a full evaluation and an annual review with the goal and a present-levels header", () => {
     for (const g of GRADE_GROUPS) {
-      const base = withGrade(defaultSetup(), g.id);
+      const base = defaultSetup(g.id);
       const evaluation = packSections(pack, { ...base, reportType: "evaluation", concerns: true }).map((s) => s.id);
       expect(evaluation.length, `${d} ${g.id}`).toBeGreaterThanOrEqual(5);
       const annual = packSections(pack, { ...base, reportType: "annual", concerns: true }).map((s) => s.id);
@@ -134,8 +134,7 @@ describe.each(PREMADE_DISCIPLINES.map((d) => [d] as [DisciplineId]))("ready-made
 });
 
 describe("premade packs", () => {
-  it("has none for OT and builds a fresh copy on every call", () => {
-    expect(premadePack("ot")).toBeNull();
+  it("builds a fresh copy on every call", () => {
     const a = premadePack("slp");
     const b = premadePack("slp");
     expect(a).toEqual(b);
@@ -144,9 +143,11 @@ describe("premade packs", () => {
     expect(a!.lists.minutes).not.toBe(b!.lists.minutes);
   });
 
-  it("lists the five disciplines and every string of every pack", () => {
-    expect(PREMADE_DISCIPLINES).toEqual(["slp", "pt", "psych", "sped", "other"]);
+  it("lists every discipline and every string of every pack", () => {
+    expect(PREMADE_DISCIPLINES).toEqual(["ot", "slp", "pt", "psych", "sped", "other"]);
     const all = premadeStrings();
+    expect(all).toContain("Occupational Therapy Evaluation Report");
+    expect(all).toContain("Informal Fine Motor Screen");
     expect(all).toContain("Speech-Language Evaluation Report");
     expect(all).toContain("Gross Motor Screen");
     expect(all).toContain("Functional Communication");
@@ -160,6 +161,7 @@ describe("premade packs", () => {
       const lists = premadePack(d)!.lists;
       for (const name of ["disability", "minutes", "location", "month", "year", "percent", "dataDates", "objectivesMet"]) expect(lists[name], `${d} ${name}`).toBeDefined();
     }
+    expect(premadePack("ot")!.lists.grasp.options).toContain("tripod");
     expect(premadePack("slp")!.lists.articulationErrors.options).toContain("/r/");
     expect(premadePack("pt")!.lists.mobility.options).toContain("walks with a walker");
     expect(premadePack("psych")!.lists.cognitiveDescriptor.options).toContain("Average");

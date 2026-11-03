@@ -1,36 +1,30 @@
 import type { DisciplineId } from "../model/disciplines";
 import { buildAllowList, scanText, type PrivacyWarning } from "../model/privacy";
 import type { Library } from "../model/types";
-import { hasOverrides, loadOverrides, normalizeOverrides, saveOverrides } from "../report/overrides";
 import { loadPack, normalizePack, savePack } from "../report/pack";
 import { templateWords } from "../report/privacy-words";
 import { supabase } from "./client";
 import type { TemplateKind } from "./events";
 
 /**
- * What an account holds: the writer's template, and nothing else. For OT that
- * is the edits laid over the built-in template; for every other discipline it
- * is the template pack. Drafts, filled values, ratings, recipes and the
- * sentence library are never read here, so they can never be uploaded.
+ * What an account holds: the writer's template pack for each discipline, and
+ * nothing else. Drafts, filled values, ratings, recipes and the sentence
+ * library are never read here, so they can never be uploaded. Rows of the
+ * retired kind "overrides" are neither read nor removed.
  */
-export const KINDS: TemplateKind[] = ["overrides", "pack"];
+export const KINDS: TemplateKind[] = ["pack"];
 export const TABLE = "templates";
 
 // ---------- the browser's copy ----------
 
 /** The template saved in this browser, or null when there is none. */
-export function readLocal(d: DisciplineId, kind: TemplateKind): unknown | null {
-  if (kind === "overrides") {
-    const o = loadOverrides(d);
-    return hasOverrides(o) ? o : null;
-  }
+export function readLocal(d: DisciplineId, _kind: TemplateKind): unknown | null {
   return loadPack(d);
 }
 
 /** Replace the browser's copy with the account's. Null removes it. */
-export function writeLocal(d: DisciplineId, kind: TemplateKind, data: unknown | null): void {
-  if (kind === "overrides") saveOverrides(d, normalizeOverrides(data));
-  else savePack(d, normalizePack(data));
+export function writeLocal(d: DisciplineId, _kind: TemplateKind, data: unknown | null): void {
+  savePack(d, normalizePack(data));
 }
 
 // ---------- comparing copies ----------
@@ -141,9 +135,9 @@ export async function fetchRemote(d: DisciplineId): Promise<RemoteTemplates> {
   if (!sb) throw new Error("Accounts are not set up.");
   const { data, error } = await sb.from(TABLE).select("kind,data").eq("discipline", d);
   if (error) throw new Error(error.message);
-  const out: RemoteTemplates = { overrides: null, pack: null };
+  const out: RemoteTemplates = { pack: null };
   for (const row of (data ?? []) as { kind: string; data: unknown }[]) {
-    if (row.kind === "overrides" || row.kind === "pack") out[row.kind] = row.data ?? null;
+    if (row.kind === "pack") out.pack = row.data ?? null;
   }
   return out;
 }

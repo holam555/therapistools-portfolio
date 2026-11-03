@@ -2,10 +2,10 @@ import { useRef, useState } from "react";
 import { KIND_LABEL } from "../model/privacy";
 import { scanReportText } from "../report/privacy-words";
 import { OPTION_LISTS } from "../report/options";
-import { fromEditable, toEditable, type BlockOverride } from "../report/overrides";
 import { cloneGrid, newGridId, sameGrid, type GridDef, type GridGroup, type GridLevel } from "../report/grids";
 import type { PackCondition } from "../report/pack";
-import { GRADE_GROUPS, type Block, type GradeGroup, type ReportType, type ScreenItem } from "../report/types";
+import { fromEditable, toEditable } from "../report/render";
+import { GRADE_GROUPS, type Block, type GradeGroup, type ReportType } from "../report/types";
 import { Modal, confirmAction } from "./common";
 import { useApp } from "./state";
 
@@ -62,6 +62,14 @@ function ExamplesEditor({ value, onChange }: { value: string[]; onChange: (v: st
   );
 }
 
+/** What an edit to one paragraph changes; a field left out is unchanged. */
+export interface BlockEdit {
+  text?: string;
+  label?: string;
+  examples?: string[];
+  hidden?: boolean;
+}
+
 /**
  * Edit one paragraph of the template. The writer sees plain text with he/him/his
  * and [STUDENT]; it is turned back into template marks on save, so the
@@ -86,7 +94,7 @@ export function EditBlockModal({
   original: Block;
   /** The block with the writer's edits applied. */
   current: Block;
-  override?: BlockOverride;
+  override?: BlockEdit;
   /** True when this block shares its section's sample sentences. */
   examplesFromSection: boolean;
   sectionExamples: string[];
@@ -94,7 +102,7 @@ export function EditBlockModal({
   listNames?: string[];
   /** What the hide button says (a pack deletes the paragraph instead). */
   hideLabel?: string;
-  onSave: (o: BlockOverride) => void;
+  onSave: (o: BlockEdit) => void;
   onSaveSectionExamples: (ex: string[]) => void;
   onReset: () => void;
   onClose: () => void;
@@ -127,7 +135,7 @@ export function EditBlockModal({
   };
 
   const save = () => {
-    const next: BlockOverride = { ...(override ?? {}) };
+    const next: BlockEdit = { ...(override ?? {}) };
     const newText = fromEditable(text.trim());
     if (newText === wordingOf(original) || toEditable(wordingOf(original)) === text.trim()) delete next.text;
     else next.text = newText;
@@ -799,66 +807,6 @@ export function GridEditorModal({
             Save
           </button>
         </span>
-      </div>
-    </Modal>
-  );
-}
-
-/** Add a fine motor screen item of the writer's own to a grade group. */
-export function AddScreenItemModal({
-  gradeLabel,
-  defaultGroup,
-  onAdd,
-  onClose,
-}: {
-  gradeLabel: string;
-  defaultGroup: ScreenItem["group"];
-  onAdd: (item: Omit<ScreenItem, "id">) => void;
-  onClose: () => void;
-}) {
-  const [label, setLabel] = useState("");
-  const [group, setGroup] = useState<ScreenItem["group"]>(defaultGroup);
-  const [opener, setOpener] = useState("He [[what you observed]].");
-  const [examples, setExamples] = useState<string[]>([]);
-  return (
-    <Modal title={`Add a screen item for grades ${gradeLabel}`} onClose={onClose} wide>
-      <div className="grid2">
-        <label className="field">
-          <span className="field-label">Item name</span>
-          <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Keyboarding" autoFocus />
-        </label>
-        <label className="field">
-          <span className="field-label">Where it goes</span>
-          <select value={group} onChange={(e) => setGroup(e.target.value as ScreenItem["group"])}>
-            <option value="classroom">Classroom skills</option>
-            <option value="supporting">Supporting skills</option>
-            <option value="paragraph">Its own paragraph</option>
-          </select>
-        </label>
-      </div>
-      <label className="field">
-        <span className="field-label">Sentence opener</span>
-        <textarea rows={4} value={opener} onChange={(e) => setOpener(e.target.value)} />
-      </label>
-      <p className="hint">Write it with he, him, his; it switches to she and her automatically. Put blanks in [[double brackets]].</p>
-      <h3 className="ex-title">Sample sentences</h3>
-      <ExamplesEditor value={examples} onChange={setExamples} />
-      <PrivacyNote texts={[opener, ...examples]} />
-      <div className="row gap end modal-actions">
-        <button type="button" className="btn" onClick={onClose}>
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={!label.trim() || !opener.trim()}
-          onClick={() => {
-            onAdd({ label: label.trim(), group, opener: fromEditable(opener.trim()), examples: examples.map((e) => e.trim()).filter(Boolean) });
-            onClose();
-          }}
-        >
-          Add item
-        </button>
       </div>
     </Modal>
   );
