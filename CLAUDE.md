@@ -80,8 +80,11 @@ Blanks can name a dropdown list as `[[label::list]]` (shared lists in
 block's or section's examples (`samples.ts`). Ratings use one model, the
 rating grid (`grids.ts`: groups of items × levels, a sentence pattern per level
 with `{items}`, `{Items}`, `{was}`), and ratings are stored as "group.row".
-The owner removed the self-care checklist from the OT template on 2026-10-27;
-don't add it back. Filled values are keyed "section/block/n", so every block
+The owner took the self-care checklist out of the OT template on 2026-10-27,
+so the OT sample has none; since 2026-11-03 it is a **ready-made assessment**
+(`report/premade/assessments.ts`, with every assessment of the discipline's
+sample) that Edit template → Add an assessment copies into a writer's own
+pack with fresh ids (`withFreshIds`). Filled values are keyed "section/block/n", so every block
 has a permanent `id`. Lines marked `generated` are written from setup choices:
 those with a `grid` open that grid's editor, those with a `pattern` are edited
 as the pattern. `ui/ReportBuilder.tsx` is the builder, `ui/ReportOutput.tsx`

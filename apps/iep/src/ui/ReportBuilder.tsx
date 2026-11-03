@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { getDiscipline } from "../model/disciplines";
 import type { GridDef } from "../report/grids";
 import {
-  assessmentOn, blankPack, conditionHolds, findSection, loadPack, moveInList, newPackId, optionalBlocks, packGrids, packSections, packUses, savePack, updateBlock, updateSection,
+  assessmentOn, blankPack, conditionHolds, findSection, loadPack, moveInList, newPackId, optionalBlocks, packGrids, packSections, packUses, savePack, updateBlock, updateSection, withFreshIds,
   type PackAssessment, type PackBlock, type PackSection, type TemplatePack,
 } from "../report/pack";
 import type { PronounSet } from "../model/types";
 import { premadePack } from "../report/premade";
+import { readyMadeAssessments } from "../report/premade/assessments";
 import { loadSetup, loadValues, saveSetup, saveValues } from "../report/setup";
 import { GRADE_GROUPS, TEACHER_AREAS, type Block, type GoalArea, type ReportSetup, type ReportValues } from "../report/types";
 import { ImportDocument } from "./ImportDocument";
@@ -171,6 +172,14 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
     if (grid) blocks.push({ kind: "grid", id: `grid-${gridId}`, grid: gridId });
     const section: PackSection = { id: sectionId, title: label, blocks, examples: [], notesHint: "The results and what you observed." };
     setAssessments([...pack.assessments, { id, label, sections: [section], ...(grid ? { grid } : {}) }]);
+  };
+  const addReadyMade = (a: PackAssessment) => {
+    const copy = withFreshIds(pack, a);
+    setAssessments([...pack.assessments, copy]);
+    // Its tick boxes start ticked for the current grade, like a new template's.
+    const ids = optionalBlocks({ ...pack, assessments: [copy] }).filter((x) => tickShown(x, setup)).map((x) => x.block.id!);
+    if (ids.length) patch({ screenItems: [...new Set([...setup.screenItems, ...ids])] });
+    say(`Added ${copy.label}. It is ticked under “What did you do?”; use ↑ to move it.`);
   };
   const removeAssessment = (a: PackAssessment) => {
     if (confirmAction(`Remove the assessment “${a.label}” and its ${a.sections.length} section${a.sections.length === 1 ? "" : "s"}?`)) setAssessments(pack.assessments.filter((x) => x.id !== a.id));
@@ -471,7 +480,7 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
           onClose={() => setAssessmentRename(null)}
         />
       )}
-      {addingAssessment && <AddAssessmentModal onAdd={addAssessment} onClose={() => setAddingAssessment(false)} />}
+      {addingAssessment && <AddAssessmentModal readyMade={readyMadeAssessments(discipline)} onAddReadyMade={addReadyMade} onAdd={addAssessment} onClose={() => setAddingAssessment(false)} />}
       {listEditing && pack.lists[listEditing] && (
         <ListEditorModal
           name={listEditing}

@@ -3,7 +3,8 @@ import { KIND_LABEL } from "../model/privacy";
 import { scanReportText } from "../report/privacy-words";
 import { OPTION_LISTS } from "../report/options";
 import { cloneGrid, newGridId, sameGrid, type GridDef, type GridGroup, type GridLevel } from "../report/grids";
-import type { PackCondition } from "../report/pack";
+import type { PackAssessment, PackCondition } from "../report/pack";
+import type { ReadyMadeAssessment } from "../report/premade/assessments";
 import { fromEditable, toEditable } from "../report/render";
 import { GRADE_GROUPS, type Block, type GradeGroup, type ReportType } from "../report/types";
 import { Modal, confirmAction } from "./common";
@@ -476,12 +477,45 @@ export function SectionSettingsModal({
   );
 }
 
-/** Add an assessment to a pack: a name, and whether it rates items on a grid. */
-export function AddAssessmentModal({ onAdd, onClose }: { onAdd: (label: string, grid: "" | GridDef["layout"]) => void; onClose: () => void }) {
+/** Add an assessment to a pack: a ready-made one, or a blank one with a name and whether it rates items on a grid. */
+export function AddAssessmentModal({
+  readyMade,
+  onAddReadyMade,
+  onAdd,
+  onClose,
+}: {
+  readyMade: ReadyMadeAssessment[];
+  onAddReadyMade: (a: PackAssessment) => void;
+  onAdd: (label: string, grid: "" | GridDef["layout"]) => void;
+  onClose: () => void;
+}) {
   const [label, setLabel] = useState("");
   const [grid, setGrid] = useState<"" | GridDef["layout"]>("");
   return (
-    <Modal title="Add an assessment" onClose={onClose}>
+    <Modal title="Add an assessment" onClose={onClose} wide>
+      {readyMade.length > 0 && (
+        <>
+          <h3 className="ex-title">Ready-made</h3>
+          <p className="hint">Added as a copy you can change: its items, levels, sentences and paragraphs become yours.</p>
+          <div className="start-choices">
+            {readyMade.map((r) => (
+              <button
+                key={r.label}
+                type="button"
+                className="start-choice"
+                onClick={() => {
+                  onAddReadyMade(r.build());
+                  onClose();
+                }}
+              >
+                <strong>{r.label}</strong>
+                <span className="hint">{r.hint}</span>
+              </button>
+            ))}
+          </div>
+          <h3 className="ex-title">Or start a blank one</h3>
+        </>
+      )}
       <label className="field">
         <span className="field-label">Name, as it appears on the “What did you do?” list</span>
         <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Classroom observation" autoFocus />

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { blankPack, conditionHolds, findSection, moveInList, newPackId, normalizePack, optionalBlocks, packSections, packUses, updateBlock, updateSection, type TemplatePack } from "../src/report/pack";
+import { blankPack, conditionHolds, findSection, moveInList, newPackId, normalizePack, optionalBlocks, packGrids, packSections, packUses, updateBlock, updateSection, withFreshIds, type TemplatePack } from "../src/report/pack";
+import { adlChecklist, readyMadeAssessments } from "../src/report/premade/assessments";
 import { premadePack } from "../src/report/premade";
 import { sectionText } from "../src/report/render";
 import { defaultSetup } from "../src/report/setup";
@@ -39,6 +40,45 @@ describe("a ready-made pack", () => {
     const old = parseBackup(JSON.stringify({ app: "easyiep", version: 1, exportedAt: "", library: starterLibrary(), recipes: [], template: { version: 1, blocks: {} } }));
     expect(old).not.toHaveProperty("template");
     expect(old).not.toHaveProperty("pack");
+  });
+});
+
+describe("a ready-made assessment added to a pack", () => {
+  it("joins the OT sample with fresh ids where they clash, and writes its paragraphs from the ratings", () => {
+    const pack = premadePack("ot");
+    const once = { ...pack, assessments: [...pack.assessments, withFreshIds(pack, adlChecklist())] };
+    const adl = once.assessments.at(-1)!;
+    expect(adl.id).toBe("adl");
+    expect(adl.grid!.id).toBe("adl");
+    // A second copy gets numbered ids, and its grid block follows its grid.
+    const twice = { ...once, assessments: [...once.assessments, withFreshIds(once, adlChecklist())] };
+    const second = twice.assessments.at(-1)!;
+    expect(second.id).toBe("adl-2");
+    expect(second.grid!.id).toBe("adl-2");
+    expect(second.sections[0].id).toBe("adl-2");
+    expect(second.sections[0].blocks.find((b) => b.kind === "grid")).toMatchObject({ grid: "adl-2" });
+    expect(adl.sections[0].blocks.find((b) => b.kind === "grid")).toMatchObject({ grid: "adl" });
+    expect(Object.keys(packGrids(twice))).toEqual(["teacher", "spm2", "adl", "adl-2"]);
+    // The grid writes one paragraph per group once its rows are rated.
+    const ratings: Record<string, string> = {};
+    for (const g of adl.grid!.groups) for (const r of g.rows) ratings[`${g.id}.${r.id}`] = "5";
+    ratings["dressing.shoes"] = "1";
+    ratings["dressing.buttons"] = "na";
+    ratings["dressing.zip-up"] = "3";
+    const text = sectionText(packSections(once, { ...defaultSetup(), ratings: { adl: ratings } }).find((s) => s.id === "adl")!, "she");
+    expect(text).toContain("Dressing: Putting on and taking off a coat, hanging a coat in a cubby, starting a zipper, unzipping a coat, and snaps were independent (Level 5). Moderate assistance (Level 3) was needed for zipping up a coat. Tying shoes required total assistance (Level 1). Buttons were not rated.");
+    expect(text).toContain("Across the checklist, she [[the pattern");
+    expect(text).not.toMatch(/\{\{|::/);
+    expect(normalizePack(JSON.parse(JSON.stringify(twice)))).toEqual(twice);
+  });
+
+  it("offers the daily living checklist and every assessment of the discipline's sample", () => {
+    const labels = readyMadeAssessments("ot").map((r) => r.label);
+    expect(labels).toEqual(["Activities of daily living checklist", "Teacher rating checklist", "Informal fine motor screen", "Beery VMI", "SPM-2 School form"]);
+    const beery = readyMadeAssessments("ot")[3].build();
+    expect(beery.id).toBe("beery");
+    expect(beery).not.toBe(readyMadeAssessments("ot")[3].build());
+    expect(readyMadeAssessments("slp").map((r) => r.label)[0]).toBe("Activities of daily living checklist");
   });
 });
 

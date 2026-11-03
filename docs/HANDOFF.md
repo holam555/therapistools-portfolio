@@ -157,8 +157,10 @@ to Vercel, so there are no old addresses to redirect.
 3. **Open questions to raise with the owner:** whether the dropdown choices
    (minutes, disability categories, grasp types) fit their district. The
    owner has checked the Word draft and is happy with it. The self-care
-   checklist was removed from the OT template on 2026-10-27 at the owner's
-   request; don't add it back.
+   checklist left the OT template on 2026-10-27 at the owner's request; on
+   2026-11-03 they asked for it back in their own template, so it became a
+   ready-made assessment any writer can add (Edit template → Add an
+   assessment), while the OT sample still has none.
 4. **Worksheets fonts:** the worksheet pages still load Google Fonts
    (disclosed on the privacy page). Moving them to `shared/fonts` needs a print
    check of every worksheet template first.

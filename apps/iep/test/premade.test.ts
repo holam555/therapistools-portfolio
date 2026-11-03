@@ -5,6 +5,7 @@ import type { DisciplineId } from "../src/model/disciplines";
 import { parseBlank } from "../src/report/options";
 import { normalizePack, packGrids, packSections, type PackSection, type TemplatePack } from "../src/report/pack";
 import { PREMADE_DISCIPLINES, premadePack, premadeStrings } from "../src/report/premade";
+import { adlChecklist } from "../src/report/premade/assessments";
 import { sectionText } from "../src/report/render";
 import { defaultSetup } from "../src/report/setup";
 import { GRADE_GROUPS, type ReportSetup } from "../src/report/types";
@@ -154,6 +155,25 @@ describe("premade packs", () => {
     expect(all).toContain("Classroom Performance Checklist");
     expect(all).toContain("typical for every item on the checklist");
     for (const d of PREMADE_DISCIPLINES) for (const s of strings(premadePack(d))) expect(all).toContain(s);
+  });
+
+  it("ships the daily living checklist clean: no leftover marks, [STUDENT] once, nothing the privacy gate would block", () => {
+    const a = adlChecklist();
+    const pack: TemplatePack = { ...premadePack("ot"), assessments: [a] };
+    for (const setup of allSetups()) {
+      const s = packSections(pack, setup).find((x) => x.id === "adl")!;
+      const text = sectionText(s, setup.pronoun);
+      expect(text).not.toMatch(/\{\{|\}\}|::|\bXX+\b/);
+      expect((text.match(/\[STUDENT\]/g) ?? []).length).toBe(1);
+      expect(text.indexOf("[STUDENT]")).toBeLessThan(text.search(PRONOUN));
+    }
+    for (const e of a.sections[0].examples) expect(e).toMatch(/\[STUDENT\]/);
+    expect(checkTemplate(pack, starterLibrary()).blocking).toEqual([]);
+    for (const text of strings(a)) for (const m of text.matchAll(/\[\[(.+?)\]\]/g)) {
+      const { list } = parseBlank(m[1]);
+      if (list) expect(pack.lists[list]).toBeDefined();
+    }
+    expect(premadeStrings()).toContain("Activities of Daily Living Checklist");
   });
 
   it("keeps the shared dropdown lists", () => {

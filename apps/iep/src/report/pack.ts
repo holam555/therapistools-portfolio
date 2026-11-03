@@ -371,6 +371,39 @@ export function newPackId(pack: TemplatePack, prefix: string): string {
   return `${prefix}${n}`;
 }
 
+/**
+ * A copy of an assessment with ids that do not clash with anything in the
+ * pack: the assessment, its grid (and every reference to it) and its sections
+ * get a numbered id where the plain one is taken.
+ */
+export function withFreshIds(pack: TemplatePack, a: PackAssessment): PackAssessment {
+  // Assessments, grids and sections each have their own namespace (the sample packs use "teacher" for all three).
+  const assessments = new Set(pack.assessments.map((x) => x.id));
+  const grids = new Set(Object.keys(packGrids(pack)));
+  const sections = new Set([...pack.sections, ...pack.assessments.flatMap((x) => x.sections)].map((s) => s.id));
+  const fresh = (taken: Set<string>, id: string) => {
+    let next = id;
+    for (let n = 2; taken.has(next); n++) next = `${id}-${n}`;
+    taken.add(next);
+    return next;
+  };
+  const copy = JSON.parse(JSON.stringify(a)) as PackAssessment;
+  copy.id = fresh(assessments, copy.id);
+  const oldGrid = copy.grid?.id;
+  const newGrid = oldGrid === undefined ? undefined : fresh(grids, oldGrid);
+  if (copy.grid && newGrid !== undefined) copy.grid.id = newGrid;
+  copy.sections = copy.sections.map((s) => ({
+    ...s,
+    id: fresh(sections, s.id),
+    blocks: s.blocks.map((b) => {
+      if (oldGrid === undefined || newGrid === undefined || oldGrid === newGrid) return b;
+      if (b.kind === "grid") return b.grid === oldGrid ? { ...b, grid: newGrid } : b;
+      return { ...b, text: b.text.split(`{summary:${oldGrid}}`).join(`{summary:${newGrid}}`) };
+    }),
+  }));
+  return copy;
+}
+
 /** Where a section lives: on its own, or inside an assessment. */
 export function findSection(pack: TemplatePack, sectionId: string): { section: PackSection; assessment?: PackAssessment } | null {
   const own = pack.sections.find((s) => s.id === sectionId);

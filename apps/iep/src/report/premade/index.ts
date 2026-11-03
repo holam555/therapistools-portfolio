@@ -1,5 +1,6 @@
 import type { DisciplineId } from "../../model/disciplines";
 import type { TemplatePack } from "../pack";
+import { adlChecklist } from "./assessments";
 import { otPack } from "./ot";
 import { otherPack } from "./other";
 import { psychPack } from "./psych";
@@ -34,9 +35,10 @@ function collectStrings(data: unknown, out: string[]): void {
   else if (data && typeof data === "object") for (const v of Object.values(data as Record<string, unknown>)) collectStrings(v, out);
 }
 
-/** Every piece of text in every ready-made pack: titles, labels, wording, examples, list options, grid labels and sentences. For the privacy allow-list. */
+/** Every piece of text in every ready-made pack and assessment: titles, labels, wording, examples, list options, grid labels and sentences. For the privacy allow-list. */
 export function premadeStrings(): string[] {
   const out: string[] = [];
   for (const d of PREMADE_DISCIPLINES) collectStrings(premadePack(d), out);
+  collectStrings(adlChecklist(), out);
   return out;
 }
