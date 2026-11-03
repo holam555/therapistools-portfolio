@@ -101,7 +101,10 @@ export function EditBlockModal({
 }) {
   const hasLabel = "label" in current && current.label !== undefined;
   const [label, setLabel] = useState(hasLabel ? ((current as { label?: string }).label ?? "") : "");
-  const [text, setText] = useState(toEditable(current.text));
+  // A generated line is edited as its pattern; the app fills each {slot} in afterwards.
+  const wordingOf = (b: Block) => b.pattern ?? b.text;
+  const slots = Object.keys(current.slots ?? {});
+  const [text, setText] = useState(toEditable(wordingOf(current)));
   const [examples, setExamples] = useState<string[]>(examplesFromSection ? sectionExamples : (current.examples ?? []));
   const [blankLabel, setBlankLabel] = useState("");
   const [blankList, setBlankList] = useState("");
@@ -126,7 +129,7 @@ export function EditBlockModal({
   const save = () => {
     const next: BlockOverride = { ...(override ?? {}) };
     const newText = fromEditable(text.trim());
-    if (newText === original.text || toEditable(original.text) === text.trim()) delete next.text;
+    if (newText === wordingOf(original) || toEditable(wordingOf(original)) === text.trim()) delete next.text;
     else next.text = newText;
     if (hasLabel) {
       const origLabel = (original as { label?: string }).label ?? "";
@@ -157,6 +160,17 @@ export function EditBlockModal({
         Write it the way it reads for a boy: he, him, his. It switches to she and her automatically. [STUDENT] marks where the name goes. Text in
         [[double brackets]] is a yellow blank; [[label::list]] gives that blank a dropdown.
       </p>
+      {slots.length > 0 && (
+        <p className="hint">
+          The app fills in {slots.map((s, i) => (
+            <span key={s}>
+              {i > 0 ? " and " : ""}
+              <code>{`{${s}}`}</code>
+            </span>
+          ))}{" "}
+          from your choices and ratings. Keep {slots.length === 1 ? "it" : "them"} where you want that to appear.
+        </p>
+      )}
       <InsertBlank
         label={blankLabel}
         setLabel={setBlankLabel}

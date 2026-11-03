@@ -2,6 +2,7 @@ import type { Block, GoalArea, ReportSection, ReportSetup } from "./types";
 import { screenItemsFor } from "./ot-screen";
 import { spmScaleList, spmSummaryPhrase } from "./spm";
 import { levelLine } from "./grids";
+import { fillPattern } from "./render";
 import { applyBlockOverrides, applyScreenOverrides, gridFor, type TemplateOverrides } from "./overrides";
 
 /**
@@ -175,6 +176,14 @@ function assessmentSections(setup: ReportSetup, o?: TemplateOverrides): ReportSe
 
 // ---------- evaluation report ----------
 
+/** The summary's sensory line: {assessments} and {results} are filled from the setup and the SPM-2 ratings. */
+const SENSORY_PATTERN =
+  "Based on the results of the {assessments}, {{their}} sensory processing skills are {results}. In the classroom, {{they}} [[sensory behaviors observed]]. {{They}} would benefit from [[sensory supports]] to [[purpose]].";
+
+/** The goal's first line: {count} is the number of objectives chosen in setup. */
+const GOAL_PATTERN =
+  "By [[month::month]] of [[year::year]], given direct instruction in fine motor skill development, {{student}} will meet [[number met::objectivesMet]] of the following {count} objectives on [[percent::percent]]% of opportunities or across [[data collection dates::dataDates]] data collection dates:";
+
 function summarySection(setup: ReportSetup, o?: TemplateOverrides): ReportSection {
   if (!setup.concerns) {
     return {
@@ -206,11 +215,12 @@ function summarySection(setup: ReportSetup, o?: TemplateOverrides): ReportSectio
     ],
   });
   if (setup.assessments.spm2 || setup.assessments.teacher) {
-    blocks.push({
-      kind: "para", id: "sensory", generated: true, grid: "spm2",
-      label: "Sensory",
-      text: `Based on the results of the ${setup.assessments.spm2 ? "Sensory Processing Measure-2 School form and teacher report" : "[[sensory assessments used]]"}, {{their}} sensory processing skills are ${(setup.assessments.spm2 && spmSummaryPhrase(setup.ratings.spm2 ?? {}, gridFor("spm2", o))) || "[[results by scale]]"}. In the classroom, {{they}} [[sensory behaviors observed]]. {{They}} would benefit from [[sensory supports]] to [[purpose]].`,
-    });
+    // Written from the SPM-2 ratings; the wording around the results is editable (see SENSORY_PATTERN).
+    const slots = {
+      assessments: setup.assessments.spm2 ? "Sensory Processing Measure-2 School form and teacher report" : "[[sensory assessments used]]",
+      results: (setup.assessments.spm2 && spmSummaryPhrase(setup.ratings.spm2 ?? {}, gridFor("spm2", o))) || "[[results by scale]]",
+    };
+    blocks.push({ kind: "para", id: "sensory", generated: true, label: "Sensory", pattern: SENSORY_PATTERN, slots, text: fillPattern(SENSORY_PATTERN, slots) });
   }
   return {
     id: "summary",
@@ -308,12 +318,8 @@ function concernSections(setup: ReportSetup): ReportSection[] {
       ],
       notesHint: "Minutes and frequency, direct or indirect, where services happen, and the skill areas.",
     });
-    const goal: Block[] = [
-      {
-        kind: "para", id: "goal-frame", generated: true,
-        text: `By [[month::month]] of [[year::year]], given direct instruction in fine motor skill development, {{student}} will meet [[number met::objectivesMet]] of the following ${Math.max(1, setup.objectives)} objectives on [[percent::percent]]% of opportunities or across [[data collection dates::dataDates]] data collection dates:`,
-      },
-    ];
+    const goalSlots = { count: String(Math.max(1, setup.objectives)) };
+    const goal: Block[] = [{ kind: "para", id: "goal-frame", generated: true, pattern: GOAL_PATTERN, slots: goalSlots, text: fillPattern(GOAL_PATTERN, goalSlots) }];
     for (let i = 0; i < Math.max(1, setup.objectives); i++) goal.push({ kind: "numbered", id: `objective${i + 1}`, text: "[[objective]]" });
     if (setup.goalAreas.length) {
       goal.push({ kind: "subheading", id: "h-standards", text: "Related Standards" });

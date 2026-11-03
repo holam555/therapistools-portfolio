@@ -345,8 +345,14 @@ function PreviewBlocks({
         const label = b.label ? <strong>{b.label}{b.kind === "bullet" ? " – " : ": "}</strong> : null;
         const src = section.blocks[i];
         const pencil =
-          onEdit && !src.generated ? (
-            <button type="button" className="edit-pencil" title="Edit this paragraph" aria-label={`Edit ${b.label ?? "paragraph"}`} onClick={() => onEdit(b.key)}>
+          onEdit && (!src.generated || src.pattern !== undefined) ? (
+            <button
+              type="button"
+              className="edit-pencil"
+              title={src.generated ? "Edit the wording around the part the app fills in" : "Edit this paragraph"}
+              aria-label={`Edit ${b.label ?? "paragraph"}`}
+              onClick={() => onEdit(b.key)}
+            >
               ✎
             </button>
           ) : onEditGrid && src.generated && src.grid ? (

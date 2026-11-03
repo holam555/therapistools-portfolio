@@ -25,6 +25,11 @@ export function fillPronouns(text: string, pronoun: PronounSet): string {
 
 export const blockKeyOf = (b: Block, index: number) => b.id ?? String(index);
 
+/** Write a generated line from its editable pattern: each {slot} becomes its value; unknown slots stay as typed. */
+export function fillPattern(pattern: string, slots: Record<string, string> = {}): string {
+  return pattern.replace(/\{([a-z]+)\}/g, (m, name: string) => (name in slots ? slots[name] : m));
+}
+
 /** Split filled text into runs, swapping in any values the writer chose. */
 export function toRuns(filled: string, sectionId: string, blockKey: string, values: ReportValues = {}): Run[] {
   const runs: Run[] = [];

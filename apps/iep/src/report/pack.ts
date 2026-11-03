@@ -140,7 +140,7 @@ function packBlocksOf(blocks: Block[]): PackBlock[] {
       out.push({ kind: "grid", id: `grid-${b.grid}`, grid: b.grid });
       continue;
     }
-    const { generated: _g, grid: _grid, ...rest } = b;
+    const { generated: _g, grid: _grid, pattern: _p, slots: _s, ...rest } = b;
     out.push(rest as Block);
   }
   return out;

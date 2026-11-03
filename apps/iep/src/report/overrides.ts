@@ -1,6 +1,6 @@
 import type { DisciplineId } from "../model/disciplines";
 import { convertPronouns } from "../model/splitter";
-import { fillPronouns, blockKeyOf } from "./render";
+import { fillPattern, fillPronouns, blockKeyOf } from "./render";
 import { OPTION_LISTS, type OptionList } from "./options";
 import { normalizeGrid, sameGrid, type GridDef } from "./grids";
 import { SPM_GRID } from "./spm";
@@ -154,10 +154,12 @@ export function applyBlockOverrides(sections: ReportSection[], o?: TemplateOverr
       const ov = o.blocks[`${s.id}/${blockKeyOf(b, i)}`];
       if (!ov) return [b];
       if (ov.hidden) return [];
+      // A generated line keeps its slots: the edit is to the pattern, and the app still fills the results in.
+      const wording = ov.text === undefined ? {} : b.pattern !== undefined ? { pattern: ov.text, text: fillPattern(ov.text, b.slots) } : { text: ov.text };
       return [
         {
           ...b,
-          ...(ov.text !== undefined ? { text: ov.text } : {}),
+          ...wording,
           ...(ov.label !== undefined && "label" in b ? { label: ov.label } : {}),
           ...(ov.examples !== undefined ? { examples: ov.examples } : {}),
         },

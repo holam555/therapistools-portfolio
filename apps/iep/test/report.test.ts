@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { otReportSections, OT_REPORT_TITLE } from "../src/report/ot-pack";
 import { screenItemsFor } from "../src/report/ot-screen";
-import { blanksIn, renderSection, sectionText } from "../src/report/render";
+import { blanksIn, fillPattern, renderSection, sectionText } from "../src/report/render";
 import { buildReportDocx, reportDocxBuffer } from "../src/report/report-docx";
 import { buildSectionPrompt, needsPrompt } from "../src/report/report-prompt";
 import { defaultSetup, withGrade } from "../src/report/setup";
@@ -335,6 +335,26 @@ describe("template edits", () => {
     expect(run.blank!.list).toBe("grasp");
     // without edits nothing changes
     expect(applyBlockOverrides(otReportSections(setup), emptyOverrides())).toEqual(otReportSections(setup));
+  });
+
+  it("edits the wording around what the app fills into a generated line", () => {
+    const o = emptyOverrides();
+    o.blocks["summary/sensory"] = { text: "Sensory results from the {assessments}: {results}. {{They}} [[next step]]." };
+    o.blocks["goal/goal-frame"] = { text: "{{student}} will meet [[number met::objectivesMet]] of these {count} objectives:" };
+    const spm = Object.fromEntries(SPM_SCALES.map((s) => [spmKey(s), "typical"]));
+    spm[spmKey("Vision")] = "severe";
+    const sections = otReportSections({ ...defaultSetup(), reportType: "annual", objectives: 4, ratings: { spm2: spm }, pronoun: "she" }, o);
+    expect(sectionText(otReportSections({ ...defaultSetup(), ratings: { spm2: spm }, pronoun: "she" }, o).find((s) => s.id === "summary")!, "she")).toContain(
+      "Sensory: Sensory results from the Sensory Processing Measure-2 School form and teacher report: affected with Severe Difficulties for Vision. She [[next step]].",
+    );
+    const goal = sections.find((s) => s.id === "goal")!;
+    expect(sectionText(goal, "she")).toContain("[STUDENT] will meet [[number met]] of these 4 objectives:");
+    expect(goal.blocks[0].pattern).toBe("{{student}} will meet [[number met::objectivesMet]] of these {count} objectives:");
+    // the built-in line keeps its pattern and slots, so the editor can show the wording with the slot in place
+    const built = otReportSections({ ...defaultSetup(), reportType: "annual" }).find((s) => s.id === "goal")!.blocks[0];
+    expect(built.pattern).toContain("{count}");
+    expect(built.slots).toEqual({ count: "3" });
+    expect(fillPattern("{count} of {unknown}", { count: "2" })).toBe("2 of {unknown}");
   });
 
   it("keeps teacher-checklist versions apart when one is edited", () => {

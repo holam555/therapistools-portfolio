@@ -68,6 +68,10 @@ interface BlockBase {
   generated?: boolean;
   /** For generated lines written from a rating grid: the grid's id, so edit mode can open its editor. */
   grid?: string;
+  /** For other generated lines: the editable wording, with {slot} marks the app fills from setup choices. */
+  pattern?: string;
+  /** What each {slot} in `pattern` stands for, for this setup. */
+  slots?: Record<string, string>;
 }
 export type Block =
   | ({ kind: "heading" } & BlockBase)
