@@ -21,6 +21,7 @@ import {
 } from '@/lib/persistence';
 import { useProfiles } from '@/hooks/use-profiles';
 import { usePageMeta } from '@/hooks/use-page-meta';
+import { EDITOR_TOUR, EDITOR_TOUR_KEY, useTour } from '@/hooks/use-tour';
 import { ageBandLabel } from '@/data/templates';
 import { styleForTemplate } from '@/lib/categoryColors';
 
@@ -265,6 +266,8 @@ export default function Editor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template, templateId, activeProfile, config.mode, config.difficulty, config.childAge, effectiveProfileId, printTick]);
 
+  const showTour = useTour(EDITOR_TOUR_KEY, EDITOR_TOUR, !!template);
+
   if (!template) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-6 text-center">
@@ -294,7 +297,12 @@ export default function Editor() {
           </span>
           <div>
             <h2 className="font-display text-xl font-extrabold text-foreground leading-tight">{template.title}</h2>
-            <p className="text-xs text-muted-foreground">{template.clinicalName} · {template.skillTag}</p>
+            <p className="text-xs text-muted-foreground">
+              {template.clinicalName} · {template.skillTag} ·{' '}
+              <button type="button" onClick={showTour} className="font-semibold text-primary hover:underline">
+                Show me around
+              </button>
+            </p>
           </div>
         </div>
 
@@ -340,7 +348,7 @@ export default function Editor() {
           {/* Hide the single preview while a batch is queued so only the 5-page
               set prints. */}
           <div className={`flex-1 flex justify-center ${batchSeeds ? 'no-print' : ''}`}>
-            <div className="worksheet-desk w-full max-w-[600px]">
+            <div className="worksheet-desk w-full max-w-[600px]" data-tour="preview">
               <WorksheetPreview config={config} data={data} sheetTitle={template.title} />
             </div>
           </div>

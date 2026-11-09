@@ -75,7 +75,8 @@ automatically, and in your account if you sign in.
   (it deletes the current template, here and in the account, after a
   warning and an offer to export a backup). A short guided tour runs the
   first time a template is on screen; "Show me around" in the header
-  replays it (`src/ui/Tour.tsx`, anchored on `data-tour` attributes).
+  replays it (`src/ui/Tour.tsx` lists the steps; the tour itself is the
+  shared `shared/tour.js`, anchored on `data-tour` attributes).
 - **Settings** — privacy, the optional account, the discipline, backup and
   restore of the template, the never-allow list for the privacy check, and
   start over. The **privacy check** warns when text typed into a blank or the

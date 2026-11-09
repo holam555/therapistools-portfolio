@@ -6,6 +6,7 @@ import { BrowserRouter, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import AppRoutes from "./AppRoutes";
 import "../../../shared/brand.css";
+import "../../../shared/tour.css";
 import "../../../shared/suite-bar.js";
 import { ProfileProvider } from "@/hooks/use-profiles";
 import { APP_BASE } from "@/lib/site";

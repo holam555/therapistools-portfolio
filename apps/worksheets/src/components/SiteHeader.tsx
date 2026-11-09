@@ -31,7 +31,9 @@ export default function SiteHeader({ right }: Props) {
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          <ProfileSwitcher />
+          <div data-tour="profile" className="flex">
+            <ProfileSwitcher />
+          </div>
           {right}
         </div>
       </div>

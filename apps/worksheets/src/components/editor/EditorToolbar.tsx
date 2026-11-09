@@ -15,13 +15,13 @@ interface Props {
 export default function EditorToolbar({ onPrint, onPrintBatch, onRegenerate, onShare, onToggleCustomize, customizeOpen, pulsePrint }: Props) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <Button onClick={onPrint} className={`font-display font-bold gap-2 h-11 px-5 shadow-sm ${pulsePrint ? 'pulse-once' : ''}`}>
+      <Button onClick={onPrint} data-tour="print" className={`font-display font-bold gap-2 h-11 px-5 shadow-sm ${pulsePrint ? 'pulse-once' : ''}`}>
         <Printer className="w-4 h-4" /> Print
       </Button>
       <Button onClick={onPrintBatch} variant="outline" className="font-display font-bold gap-2 h-11" title="Print 5 different versions of this worksheet at once">
         <Layers className="w-4 h-4" /> Print 5 varied
       </Button>
-      <Button onClick={onRegenerate} variant="outline" className="font-display font-bold gap-2 h-11">
+      <Button onClick={onRegenerate} data-tour="regenerate" variant="outline" className="font-display font-bold gap-2 h-11">
         <RefreshCw className="w-4 h-4" /> Regenerate
       </Button>
       <Button onClick={onShare} variant="outline" className="font-display font-bold gap-2 h-11" title="Copy a link to this exact worksheet">
@@ -29,6 +29,7 @@ export default function EditorToolbar({ onPrint, onPrintBatch, onRegenerate, onS
       </Button>
       <Button
         onClick={onToggleCustomize}
+        data-tour="customize"
         variant={customizeOpen ? 'secondary' : 'outline'}
         className="font-display font-bold gap-2 h-11 ml-auto"
       >

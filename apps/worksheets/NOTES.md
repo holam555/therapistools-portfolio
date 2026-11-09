@@ -2,6 +2,23 @@
 
 _Last updated: 2026-07-15. **Start with [ROADMAP.md](ROADMAP.md)** — it contains the current phased backlog with decisions already made. This file is the historical session log. The app lives in `otsheetai/`._
 
+## 2026-11-09 — Guided tours on the Gallery and the Editor (Fable)
+The site owner asked for a first-visit tour like the IEP Writer's. The tour
+itself is the shared, framework-free `shared/tour.js` + `tour.css` (one
+implementation for all three Therapistools apps); this app only lists the
+steps and decides when to run them.
+- `src/hooks/use-tour.ts`: `useTour(key, steps, enabled)` runs a tour once
+  (flag `otsheet:tour:gallery:v1` / `otsheet:tour:editor:v1`, value "1" only)
+  and returns a replay function; `GALLERY_TOUR` (profile, filters, gallery,
+  guides) and `EDITOR_TOUR` (preview, regenerate, customize, print).
+- Anchors are `data-tour` attributes: `SiteHeader` (profile), `Gallery`
+  (filters, gallery, guides), `Editor` (preview) and `EditorToolbar`
+  (print, regenerate, customize). "Show me around" links sit in the gallery
+  heading and under the editor title.
+- Copy has no em or en dash; `grep -rlP '[\x{2014}\x{2013}]' dist` was
+  empty after the build. `npx tsc --noEmit` clean, 86 tests green. Checked in
+  the browser on the site preview (port 4300).
+
 ## 2026-07-15 — Em/en dash sweep of all user-visible copy (Opus)
 User asked that the website never use an em dash (—) or en dash (–), that
 existing ones be fixed, and that the rule go in CLAUDE.md. Scope confirmed

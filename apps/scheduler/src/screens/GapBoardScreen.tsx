@@ -100,7 +100,7 @@ export function GapBoardScreen() {
   return (
     <div className="stack">
       <div className="board-rail">
-        <div className="card">
+        <div className="card" data-tour="students-shown">
           <h2 style={{ fontSize: 15, marginBottom: 8 }}>Students shown</h2>
           <div className="rail-list">
             {[...ws.students]
@@ -147,7 +147,7 @@ export function GapBoardScreen() {
         </div>
       </div>
 
-      <div className="board-columns">
+      <div className="board-columns" data-tour="board">
         {shownStudents.length === 0 ? (
           <div className="empty-state" style={{ flex: 1 }}>
             <h2>No students selected</h2>

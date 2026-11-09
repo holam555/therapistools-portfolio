@@ -34,6 +34,9 @@ also has its own docs; read them before changing that app.
    `shared/brand.css`, the name and address in `shared/brand.js`. Apps map
    their own variables onto the `--tt-*` tokens; don't hard-code brand colors
    in an app. No third-party fonts or scripts outside the worksheet app.
+   The first-visit guided tour is shared too (`shared/tour.js`, `tour.css`,
+   `tour.d.ts`): framework-free, anchored on `data-tour` attributes; each app
+   lists its own steps and keeps its own "seen" flag.
 7. **Keep stored data compatible.** The IEP Writer still saves under
    `easyiep.*` keys and tags backups `app: "easyiep"`; the worksheet app uses
    `otsheet:*`. These are internal names; don't rename them without a migration.

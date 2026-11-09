@@ -18,9 +18,23 @@ export interface PromptContext {
   pronoun: PronounSet;
 }
 
-/** Sections with nothing to fill and no examples need no prompt. */
+/** A section needs a prompt while it has blanks left to fill. */
 export function needsPrompt(s: ReportSection, pronoun: PronounSet, values: ReportValues = {}): boolean {
-  return !!s.notesHint && blanksIn(s, pronoun, values).length > 0;
+  return blanksIn(s, pronoun, values).length > 0;
+}
+
+/**
+ * What the prompt asks the writer to paste: the template's own hint when it
+ * has one, otherwise the blanks still open in the section ("[[score]]" →
+ * "score"), so a template built from a document or started blank gets a
+ * prompt for every section with blanks.
+ */
+export function promptHint(s: ReportSection, pronoun: PronounSet, values: ReportValues = {}): string {
+  if (s.notesHint) return s.notesHint;
+  const labels = blanksIn(s, pronoun, values).map((b) => b.replace(/^\[\[|\]\]$/g, ""));
+  if (!labels.length) return "anything relevant";
+  const shown = labels.slice(0, 4).join(", ");
+  return labels.length > 4 ? `${shown}, and the rest of the blanks` : shown;
 }
 
 export function buildSectionPrompt(s: ReportSection, ctx: PromptContext, values: ReportValues = {}): string {
@@ -55,7 +69,7 @@ export function buildSectionPrompt(s: ReportSection, ctx: PromptContext, values:
     "",
     examples,
     examples ? "" : null,
-    `=== MY ROUGH NOTES FOR THIS SECTION (paste below this line; ${s.notesHint ?? "anything relevant"}) ===`,
+    `=== MY ROUGH NOTES FOR THIS SECTION (paste below this line; ${promptHint(s, ctx.pronoun, values)}) ===`,
     "",
     "",
     "=== END NOTES ===",

@@ -414,12 +414,3 @@ mark.blank { background: #fff1a8; color: inherit; border-radius: 3px; padding: 0
 .start-choice-primary { border-color: var(--accent); }
 .account-stored { margin: 0; padding: 0.6rem 0.8rem 0.6rem 1.9rem; background: var(--tt-muted); border-radius: var(--radius); font-size: 0.9rem; }
 .account-stored li { margin: 0.1rem 0; }
-
-/* guided tour */
-.tour { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
-.tour-spot { position: fixed; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(20, 24, 30, 0.55); border: 2px solid var(--accent); }
-.tour-dim { position: fixed; inset: 0; background: rgba(20, 24, 30, 0.55); }
-.tour-card { position: fixed; background: var(--panel); border-radius: var(--tt-radius-lg); padding: 1rem 1.1rem; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3); pointer-events: auto; }
-.tour-card h3 { margin: 0.2rem 0 0.35rem; font-size: 1.1rem; }
-.tour-card p { margin: 0 0 0.8rem; font-size: 0.95rem; line-height: 1.45; }
-.tour-step { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; color: var(--muted); }

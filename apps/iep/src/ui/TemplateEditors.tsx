@@ -583,7 +583,7 @@ export function SectionSettingsModal({
       )}
       <ConditionEditor value={when} onChange={setWhen} assessments={assessments} />
       <label className="field">
-        <span className="field-label">Notes the AI prompt asks you to paste (leave empty for fixed wording with no prompt)</span>
+        <span className="field-label">Notes the AI prompt asks you to paste (optional; otherwise it names the section's blanks)</span>
         <input value={notesHint} onChange={(e) => setNotesHint(e.target.value)} placeholder="e.g. The scores and what you observed" />
       </label>
       <PrivacyNote texts={[title, notesHint]} />

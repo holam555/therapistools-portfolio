@@ -1,5 +1,7 @@
-import { useRef, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { markTourSeen, startTour, tourSeen } from '../../../../shared/tour.js';
+import { SCHEDULER_TOUR, SCHEDULER_TOUR_KEY } from './tour';
 import { ConfirmModal } from './ConfirmModal';
 import { FloatingLinks } from './FloatingLinks';
 import { GuideRail } from './GuideRail';
@@ -31,6 +33,30 @@ export function AppShell() {
   const [pendingFull, setPendingFull] = useState<SchoolSnapshot[] | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
+  // The guided tour: once, the first time the Gap Board is open; again from "Show me around".
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [tour, setTour] = useState(false);
+  useEffect(() => {
+    if (location.pathname === '/board' && !tourSeen(SCHEDULER_TOUR_KEY)) setTour(true);
+    if (location.pathname !== '/board') setTour(false);
+  }, [location.pathname]);
+  useEffect(() => {
+    if (!tour) return;
+    const t = startTour(SCHEDULER_TOUR, {
+      onDone: () => {
+        markTourSeen(SCHEDULER_TOUR_KEY);
+        setTour(false);
+      },
+    });
+    return () => t.stop();
+  }, [tour]);
+  function showMeAround() {
+    setTour(false);
+    navigate('/board');
+    window.setTimeout(() => setTour(true), 80);
+  }
+
   async function handleImportFile(file: File) {
     try {
       const parsed = parseBackup(await file.text(), importWorkspace);
@@ -60,6 +86,7 @@ export function AppShell() {
           }}
           title="Switch school - each school keeps its own students, providers, and schedules"
           style={{ fontWeight: 700, maxWidth: 150 }}
+          data-tour="school"
         >
           {schools.map((s) => (
             <option key={s.id} value={s.id}>
@@ -83,18 +110,21 @@ export function AppShell() {
             }}
           />
         )}
-        <nav>
+        <nav data-tour="nav">
           <NavLink to="/home">Guide</NavLink>
           <NavLink to="/board">Gap Board</NavLink>
-          <NavLink to="/plan">Auto-Plan</NavLink>
+          <NavLink to="/plan" data-tour="plan">Auto-Plan</NavLink>
           <NavLink to="/my-schedule">My Schedule</NavLink>
-          <NavLink to="/tracker">Tracker</NavLink>
+          <NavLink to="/tracker" data-tour="tracker">Tracker</NavLink>
           <NavLink to="/students">Students</NavLink>
           <NavLink to="/providers">Providers</NavLink>
           <NavLink to="/setup">School Setup</NavLink>
         </nav>
         <div className="topbar-actions">
-          <details className="menu" ref={menuRef}>
+          <button className="btn ghost small" onClick={showMeAround} title="Show me around: a short tour of the Gap Board">
+            Tour
+          </button>
+          <details className="menu" ref={menuRef} data-tour="backup">
             <summary className="btn ghost small">Backup</summary>
             <div className="menu-list">
               <button

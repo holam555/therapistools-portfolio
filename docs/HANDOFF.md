@@ -177,9 +177,17 @@ to Vercel, so there are no old addresses to redirect.
      warning and a backup button (deleting the local template also deletes
      the account copy, by design of the sync); imported templates get a
      notes hint from the blanks' labels so every section with blanks has a
-     prompt; long instruction paragraphs became short lists. The owner
-     wants the same tour for the scheduler and worksheets once they have
-     checked this one.
+     prompt; long instruction paragraphs became short lists.
+   - Done 2026-11-09 (third round): any section with open blanks gets a
+     prompt (`needsPrompt` no longer requires a notes hint; `promptHint`
+     names the blanks when the template has none), since the owner's own
+     template showed no prompts. The tour became a shared, framework-free
+     module (`shared/tour.js`, `tour.css`, `tour.d.ts`) used by all three
+     apps: IEP Writer (Report tab), scheduler (Gap Board, "Show me around"
+     in the top bar, labelled "Tour" since the bar is tight; key `gapboard-tour-done`) and worksheets (Gallery and
+     Editor, keys `otsheet:tour:*:v1`). Steps whose target is not on the
+     page are skipped, so an empty school or a template without blanks
+     still gets a sensible tour.
 2. **9–12 fine motor screen,** when the owner sends one.
 3. **Open questions to raise with the owner:** whether the dropdown choices
    (minutes, disability categories, grasp types) fit their district. The

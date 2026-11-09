@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import '../../../shared/brand.css';
+import '../../../shared/tour.css';
 import '../../../shared/suite-bar.js';
 import './styles/app.css';
 

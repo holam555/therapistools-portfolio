@@ -4,7 +4,7 @@ import { gridRatedCount, gridRows, ratingKey, type GridDef, type GridRatings } f
 import type { OptionList } from "../report/options";
 import { renderSection, type Run } from "../report/render";
 import { buildReportDocx, reportDocxBlob } from "../report/report-docx";
-import { buildSectionPrompt, needsPrompt } from "../report/report-prompt";
+import { buildSectionPrompt, needsPrompt, promptHint } from "../report/report-prompt";
 import type { GradeGroup, ReportSection, ReportType, ReportValues } from "../report/types";
 import { BlankPicker, type PickerTarget } from "./BlankPicker";
 import { copyText, downloadBlob } from "./clipboard";
@@ -175,13 +175,15 @@ export function ReportOutput({
           <li>Paste the answer into your Word draft.</li>
         </ol>
         <p className="hint">Each prompt carries the section as you filled it, with your sample sentences so the result matches your style. Nothing is sent from here.</p>
-        {promptSections.length === 0 && <p className="hint">Every blank is filled, so nothing needs a prompt.</p>}
+        {promptSections.length === 0 && (
+          <p className="hint">{sections.length === 0 ? "Prompts appear here once the template has sections with blanks." : "Every blank is filled, so nothing needs a prompt."}</p>
+        )}
         <ul className="prompt-list">
           {promptSections.map((s) => (
             <li key={s.id} className="prompt-card">
               <div>
                 <strong>{s.title}</strong>
-                <div className="hint">Notes to paste: {s.notesHint}</div>
+                <div className="hint">Notes to paste: {promptHint(s, pronoun, values)}</div>
               </div>
               <button type="button" className="btn btn-sm" onClick={() => copyPrompt(s)}>Copy prompt</button>
             </li>

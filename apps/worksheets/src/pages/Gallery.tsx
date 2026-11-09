@@ -14,6 +14,7 @@ import { WorksheetMode } from '@/lib/shapes';
 import { generateWorksheetSeeded, hashSeed } from '@/lib/seededGenerate';
 import { useProfiles } from '@/hooks/use-profiles';
 import { loadHistory, encodeConfig } from '@/lib/persistence';
+import { GALLERY_TOUR, GALLERY_TOUR_KEY, useTour } from '@/hooks/use-tour';
 
 /** Fanned stack of three real worksheet previews for the hero. */
 function HeroFan() {
@@ -119,6 +120,8 @@ export default function Gallery() {
     return out;
   }, [effectiveProfileId]);
 
+  const showTour = useTour(GALLERY_TOUR_KEY, GALLERY_TOUR);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SiteHeader />
@@ -177,7 +180,7 @@ export default function Gallery() {
         )}
 
         {/* Browse filters */}
-        <div id="filters" className="rounded-2xl border border-border bg-card/60 p-4 sm:p-5 space-y-3 scroll-mt-20">
+        <div id="filters" data-tour="filters" className="rounded-2xl border border-border bg-card/60 p-4 sm:p-5 space-y-3 scroll-mt-20">
           <FilterRow label="By age">
             <Chip active={age === 'all'} onClick={() => setAge('all')}>All ages</Chip>
             {AGE_BANDS.map((b) => (
@@ -223,8 +226,14 @@ export default function Gallery() {
         </div>
 
         {/* Gallery grid */}
-        <section id="gallery" aria-label="All worksheets" className="scroll-mt-20">
-          <SectionHeading>
+        <section id="gallery" aria-label="All worksheets" className="scroll-mt-20" data-tour="gallery">
+          <SectionHeading
+            right={
+              <button type="button" onClick={showTour} className="text-sm font-semibold text-primary hover:underline whitespace-nowrap">
+                Show me around
+              </button>
+            }
+          >
             {anyFilter ? `${filtered.length} matching ${filtered.length === 1 ? 'worksheet' : 'worksheets'}` : `All ${TEMPLATES.length} worksheets`}
           </SectionHeading>
           {filtered.length === 0 ? (
@@ -242,7 +251,7 @@ export default function Gallery() {
             why behind the practice"), and gives the guides a home on the
             highest-traffic page. */}
         {GUIDES.length > 0 && (
-          <section aria-label="Guides for parents" className="pt-2">
+          <section aria-label="Guides for parents" className="pt-2" data-tour="guides">
             <div className="dotted-divider mb-8" aria-hidden="true" />
             <SectionHeading
               sub="Therapist-informed answers to the questions parents actually ask, with free printables to practise."
