@@ -394,3 +394,13 @@ mark.blank { background: #fff1a8; color: inherit; border-radius: 3px; padding: 0
 .account-stored .hint { margin: 0; }
 .sync-status { display: flex; flex-direction: column; gap: 0.25rem; }
 .warning-list { margin: 0.25rem 0 0; padding-left: 1.1rem; font-size: 0.92rem; }
+
+/* edit mode: paragraphs a condition or tick box leaves out of this report */
+.doc-preview.editing .doc-hidden { opacity: 0.55; border-left: 3px dotted var(--line); padding-left: 1.6rem; }
+.doc-preview.editing .doc-hidden mark.blank, .doc-preview.editing .doc-hidden .blank-btn { background: transparent; }
+.doc-hidden-why { margin-right: 0.4rem; font-size: 0.78rem; vertical-align: 0.1rem; }
+.cond-more { margin: 0.4rem 0 0.8rem; }
+.cond-more > summary { cursor: pointer; font-size: 0.9rem; color: var(--muted); }
+.cond-row { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin: 0.3rem 0 0.6rem; }
+.cond-row label { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9rem; white-space: nowrap; }
+.cond-row select { font-size: 0.9rem; }

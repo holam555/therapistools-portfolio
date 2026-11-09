@@ -4,7 +4,7 @@ import { announceTemplateChange } from "../account/events";
 import { gridSummaryPhrase, groupSentences, levelLine, normalizeGrid, type GridDef, type GridRatings } from "./grids";
 import { OPTION_LISTS, type OptionList } from "./options";
 import { fillPattern } from "./render";
-import { GRADE_GROUPS, type Block, type GoalArea, type GradeGroup, type ReportSection, type ReportSetup, type ReportType, type ServiceType, type TeacherArea, type TeacherAreas } from "./types";
+import { GOAL_AREAS, GRADE_GROUPS, TEACHER_AREAS, type Block, type GoalArea, type GradeGroup, type ReportSection, type ReportSetup, type ReportType, type ServiceType, type TeacherArea, type TeacherAreas } from "./types";
 
 /**
  * A template pack: one discipline's report template as plain data, built and
@@ -93,6 +93,23 @@ export function conditionHolds(when: PackCondition | undefined, setup: ReportSet
   return true;
 }
 
+/** A condition in words, for badges in edit mode: "annual review only · sensory ticked". Empty when there is none. */
+export function describeCondition(when: PackCondition | undefined, pack?: Pick<TemplatePack, "assessments">): string {
+  if (!when) return "";
+  const parts: string[] = [];
+  if (when.reportType) parts.push(when.reportType === "evaluation" ? "evaluation only" : "annual review only");
+  if (when.concerns !== undefined) parts.push(when.concerns ? "concerns found / qualifies" : "no concerns / does not qualify");
+  if (when.grades) parts.push(`grades ${when.grades.map((g) => GRADE_GROUPS.find((x) => x.id === g)?.label ?? g).join(", ")}`);
+  if (when.serviceType) parts.push(`${when.serviceType} services`);
+  if (when.teacherAreas)
+    for (const [k, v] of Object.entries(when.teacherAreas)) parts.push(`${(TEACHER_AREAS.find((t) => t.id === k)?.label ?? k).toLowerCase()} ${v ? "ticked" : "not ticked"}`);
+  if (when.anyTeacherArea !== undefined) parts.push(when.anyTeacherArea ? "at least one teacher area ticked" : "no teacher area ticked");
+  if (when.goalArea) parts.push(`${(GOAL_AREAS.find((g) => g.id === when.goalArea)?.label ?? when.goalArea).toLowerCase()} standard chosen`);
+  if (when.assessments)
+    for (const [k, v] of Object.entries(when.assessments)) parts.push(`${pack?.assessments.find((a) => a.id === k)?.label ?? k} ${v ? "done" : "not done"}`);
+  return parts.join(" · ");
+}
+
 /** Marks in a paragraph the app writes in: {count} (objectives chosen) and {summary:<grid id>} (that grid's summary phrase). */
 function packSlots(text: string, grids: Record<string, GridDef>, setup: ReportSetup): Record<string, string> | undefined {
   const slots: Record<string, string> = {};
@@ -164,12 +181,15 @@ function levelLineOf(grid: GridDef, value: string, ratings: GridRatings): string
   return levelLine(grid, l, ratings) ?? grid.blank;
 }
 
-function toSection(s: PackSection, grids: Record<string, GridDef>, setup: ReportSetup): ReportSection {
+function toSection(s: PackSection, grids: Record<string, GridDef>, setup: ReportSetup, pack: TemplatePack, showHidden: boolean): ReportSection {
   const blocks: Block[] = [];
   // A subheading whose paragraphs were all left out (unticked, or hidden by a condition) is left out too.
-  let heading: { at: number; lost: boolean } | null = null;
+  let heading: { at: number; lost: boolean; kept: number } | null = null;
   const closeHeading = () => {
-    if (heading?.lost && blocks.length === heading.at + 1) blocks.splice(heading.at, 1);
+    if (heading?.lost && heading.kept === 0) {
+      if (showHidden) blocks[heading.at] = { ...blocks[heading.at], hidden: true, hiddenWhy: blocks[heading.at].hiddenWhy ?? "nothing under it is shown" };
+      else blocks.splice(heading.at, 1);
+    }
     heading = null;
   };
   for (const b of s.blocks) {
@@ -178,23 +198,26 @@ function toSection(s: PackSection, grids: Record<string, GridDef>, setup: Report
       continue;
     }
     const { when, optional, repeat, ...plain } = b;
-    const shown = conditionHolds(when, setup) && (!optional || setup.screenItems.includes(plain.id ?? ""));
+    const unticked = !!optional && !setup.screenItems.includes(plain.id ?? "");
+    const shown = conditionHolds(when, setup) && !unticked;
+    const why = shown ? undefined : unticked ? "unticked under “What did you do?”" : describeCondition(when, pack);
+    const hide = (block: Block): Block => (shown ? block : { ...block, hidden: true, hiddenWhy: why });
     if (plain.kind === "subheading" || plain.kind === "heading") {
       closeHeading();
-      if (!shown) continue;
-      heading = { at: blocks.length, lost: false };
-      blocks.push(plain);
+      if (!shown && !showHidden) continue;
+      heading = { at: blocks.length, lost: false, kept: 0 };
+      blocks.push(hide(plain));
       continue;
     }
     if (!shown) {
       if (heading) heading.lost = true;
-      continue;
-    }
+      if (!showHidden) continue;
+    } else if (heading) heading.kept++;
     const slots = packSlots(plain.text, grids, setup);
     const make = (id: string | undefined, sourceId?: string): Block =>
-      ({ ...plain, id, ...(sourceId ? { sourceId } : {}), ...(slots ? { generated: true, pattern: plain.text, slots, text: fillPattern(plain.text, slots) } : {}) }) as Block;
-    if (repeat === "objectives") for (let i = 1; i <= Math.max(1, setup.objectives); i++) blocks.push(make(`${plain.id}${i}`, plain.id));
-    else blocks.push(make(plain.id));
+      hide({ ...plain, id, ...(sourceId ? { sourceId } : {}), ...(slots ? { generated: true, pattern: plain.text, slots, text: fillPattern(plain.text, slots) } : {}) } as Block);
+    if (repeat === "objectives" && shown) for (let i = 1; i <= Math.max(1, setup.objectives); i++) blocks.push(make(`${plain.id}${i}`, plain.id));
+    else blocks.push(make(repeat === "objectives" ? `${plain.id}1` : plain.id, repeat === "objectives" ? plain.id : undefined));
   }
   closeHeading();
   // A section with no samples of its own borrows its paragraphs'.
@@ -205,12 +228,17 @@ function toSection(s: PackSection, grids: Record<string, GridDef>, setup: Report
 /** Is this assessment ticked? Unknown ones count as ticked, so a new assessment shows up at once. */
 export const assessmentOn = (setup: ReportSetup, id: string) => setup.assessments[id] !== false;
 
-/** The sections of a report built from a pack, for this setup. */
-export function packSections(pack: TemplatePack, setup: ReportSetup): ReportSection[] {
+/**
+ * The sections of a report built from a pack, for this setup. With
+ * `showHidden`, paragraphs a condition or an unticked tick box leaves out are
+ * kept and marked `hidden` (with the reason), so edit mode can show every
+ * paragraph of the template; sections left out stay left out.
+ */
+export function packSections(pack: TemplatePack, setup: ReportSetup, opts: { showHidden?: boolean } = {}): ReportSection[] {
   const grids = packGrids(pack);
   const around = (place: "before" | "after") => pack.sections.filter((s) => (s.place ?? "after") === place && conditionHolds(s.when, setup));
   const middle = pack.assessments.filter((a) => assessmentOn(setup, a.id)).flatMap((a) => a.sections.filter((s) => conditionHolds(s.when, setup)));
-  return [...around("before"), ...middle, ...around("after")].map((s) => toSection(s, grids, setup));
+  return [...around("before"), ...middle, ...around("after")].map((s) => toSection(s, grids, setup, pack, !!opts.showHidden));
 }
 
 // ---------- starting points ----------

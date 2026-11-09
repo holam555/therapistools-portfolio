@@ -8,7 +8,7 @@ import { scanReportText } from "../src/report/privacy-words";
 import { blanksIn, fillPattern, fromEditable, renderSection, sectionText, toEditable } from "../src/report/render";
 import { buildReportDocx, reportDocxBuffer } from "../src/report/report-docx";
 import { buildSectionPrompt, needsPrompt } from "../src/report/report-prompt";
-import { fitToBlank, sampleSentences } from "../src/report/samples";
+import { blankSuggestions, fitToBlank, liftFills, relevantSentences, sampleSentences, wordingPattern } from "../src/report/samples";
 import { defaultSetup, migrateSpmKeys, migrateValueKeys } from "../src/report/setup";
 import type { ReportSetup } from "../src/report/types";
 
@@ -62,7 +62,7 @@ describe("OT report template", () => {
 
   it("fills pronouns for she and leaves no list names in the text", () => {
     const text = sectionText(find("screen-g25", { pronoun: "she" }), "she");
-    expect(text).toContain("She used a [[grasp type]] grasp with her [[handedness]] hand");
+    expect(text).toContain("She used a [[handedness]] [[grasp type]] grasp");
     expect(text).not.toContain("::");
     expect(text).not.toMatch(/\b(he|his|him)\b/);
   });
@@ -101,7 +101,11 @@ describe("OT report template", () => {
     const service = (p: Partial<ReportSetup>) => sectionText(find("service", p), "he");
     expect(service({ reportType: "evaluation" })).toContain("Services will be direct: the occupational therapist will work with him on [[what the sessions will target]]");
     expect(service({ reportType: "evaluation" })).not.toContain("indirect");
-    expect(service({ reportType: "annual", serviceType: "indirect" })).toContain("Services will be indirect: the occupational therapist will consult with his teachers and family");
+    const indirect = service({ reportType: "annual", serviceType: "indirect" });
+    expect(indirect).toContain("These services will be indirect, to support [[what they support, such as accommodations or strategies]]");
+    expect(indirect).toContain("collaborating with his special education team and general education teachers, or working one to one with the occupational therapist");
+    expect(indirect).not.toContain("Services will be direct");
+    expect(find("service", { reportType: "annual", serviceType: "indirect" }).examples.some((e) => e.includes("20 minutes semesterly") && e.includes("will be indirect"))).toBe(true);
     expect(sections({ reportType: "evaluation", concerns: false }).some((s) => s.id === "service")).toBe(false);
   });
 
@@ -187,9 +191,9 @@ describe("section prompts", () => {
     expect(p).toContain("school-based occupational therapist write one section of a student's IEP evaluation report");
     expect(p).toContain("grade 2–5");
     expect(p).toContain("=== FRAME ===\nINFORMAL FINE MOTOR SCREEN");
-    expect(p).toContain("- Grasp and pressure – She used a [[grasp type]] grasp with her [[handedness]] hand");
+    expect(p).toContain("- Grasp and pressure – She used a [[handedness]] [[grasp type]] grasp");
     expect(p).toContain("=== EXAMPLES (for style and tone only; never copy their details) ===");
-    expect(p).toContain("She used a thumb wrap grasp with her left hand and pressed too hard.");
+    expect(p).toContain("She used a left-handed thumb wrap grasp and pressed too hard.");
     expect(p).toContain("then she, her, hers");
     expect(p).toContain("Never invent scores");
     expect(p).toMatch(/=== MY ROUGH NOTES FOR THIS SECTION \(paste below this line; [^)]+\) ===\n\n\n=== END NOTES ===$/);
@@ -239,14 +243,14 @@ describe("fillable blanks", () => {
     const key = grasp.runs.find((r) => r.blank)!.blank!.key;
     const values = { [key]: "tripod" };
     const fewer = packSections(pack, { ...setup, screenItems: setup.screenItems.filter((id) => id !== "g25-near") }).find((s) => s.id === "screen-g25")!;
-    expect(sectionText(fewer, "he", values)).toContain("- Grasp and pressure – He used a tripod grasp with his [[handedness]] hand");
+    expect(sectionText(fewer, "he", values)).toContain("- Grasp and pressure – He used a tripod [[grasp type]] grasp");
   });
 
   it("offers sample sentences from the section's examples, in the chosen pronoun", () => {
     const screen = find("screen-k1", { grade: "k1" });
     const she = sampleSentences(screen.examples, "she");
     expect(she[0]).toBe("An informal fine motor screen was completed with her to see how she manages the hand skills expected in her grade.");
-    expect(she).toContain("She held the crayon with a fisted grasp in her right hand and switched hands twice.");
+    expect(she).toContain("She held the crayon with a right-handed fisted grasp and switched hands twice.");
     expect(she.join(" ")).not.toMatch(/\[STUDENT\]|\bhe\b|\bhis\b/i);
     expect(fitToBlank("He had good use of his stabilizer hand.", true)).toBe("He had good use of his stabilizer hand");
     expect(fitToBlank("He had good use of his stabilizer hand.", false)).toBe("He had good use of his stabilizer hand.");
@@ -322,5 +326,66 @@ describe("privacy check while editing the template", () => {
     const flagged = scanReportText("He and Ms. Rivera reported that he scored Below Average on Visual Perception.", lib).map((w) => w.text);
     expect(flagged).toContain("Rivera");
     expect(flagged.filter((w) => ["He", "Below", "Average", "Visual", "Perception"].includes(w))).toEqual([]);
+  });
+});
+
+describe("what the blank picker offers", () => {
+  const beery = "Standard score [[score]], percentile rank [[percentile]], [[descriptor::beeryDescriptor]]. {{They}} copied the forms [[how: which forms were lost, line quality, rotations]].";
+  const example =
+    "The Beery VMI asks [STUDENT] to copy forms. Visual-Motor Integration: standard score 82, percentile rank 12, Below Average. He copied the forms with wobbly lines and lost the diagonal forms, drawing the triangle with rounded corners. Visual Perception: standard score 104, percentile rank 61, Average, with no errors.";
+
+  it("lifts what an example put where this blank sits when the example follows the wording", () => {
+    expect(liftFills(beery, 0, [example], "she")).toEqual(["82"]);
+    expect(liftFills(beery, 1, [example], "she")).toEqual(["12"]);
+    expect(liftFills(beery, 2, [example], "she")).toEqual(["Below Average"]);
+    expect(liftFills(beery, 3, [example], "she")).toEqual(["with wobbly lines and lost the diagonal forms, drawing the triangle with rounded corners"]);
+    const grasp = "{{They}} used a [[handedness::handedness]] [[grasp type::grasp]] grasp and pressed [[too hard, too lightly or evenly]].";
+    const screen = "She copied a sentence in two minutes. She used a left-handed thumb wrap grasp and pressed too hard. She sat slumped at the desk.";
+    expect(liftFills(grasp, 0, [screen], "he")).toEqual(["left-handed"]);
+    expect(liftFills(grasp, 1, [screen], "he")).toEqual(["thumb wrap"]);
+    expect(liftFills(grasp, 2, [screen], "he")).toEqual(["too hard"]);
+    // Pronouns inside a lifted value follow the chosen he/she.
+    const posture = "At the table {{they}} sat [[how]], and {{their}} helper hand [[held the paper or stayed in the lap]].";
+    expect(liftFills(posture, 1, ["At the table he sat leaning on an elbow, and his helper hand stayed in his lap until reminded."], "she")).toEqual(["stayed in her lap until reminded"]);
+  });
+
+  it("does not guess from wording with too little fixed text, or from examples that do not follow it", () => {
+    expect(wordingPattern("[[Summary of the findings]]")).toBeNull();
+    expect(wordingPattern("{{They}} [[did what]].")).toBeNull();
+    expect(liftFills(beery, 0, ["He worked carefully and asked to erase several forms."], "he")).toEqual([]);
+  });
+
+  it("ranks sentences by the words they share with the blank and its line, and offers everything for a blank-only paragraph", () => {
+    const all = sampleSentences([example, "During testing he worked carefully and asked to erase several forms."], "he");
+    const related = relevantSentences(all, "During testing {{they}} [[attention, effort and pace]].", 0, "attention, effort and pace");
+    expect(related[0]).toBe("During testing he worked carefully and asked to erase several forms.");
+    expect(relevantSentences(all, "[[Summary]]", 0, "Summary")).toEqual(all.slice(0, 6));
+    expect(relevantSentences(all, "{{They}} ate [[what]] for lunch.", 0, "what")).toEqual([]);
+    // Only the sentence the blank sits in counts: the score lines do not pull in sentences about scores for the "how" blank.
+    expect(relevantSentences(all, beery, 3, "how")).toEqual([
+      "He copied the forms with wobbly lines and lost the diagonal forms, drawing the triangle with rounded corners.",
+      "The Beery VMI asks him to copy forms.",
+      "During testing he worked carefully and asked to erase several forms.",
+    ]);
+  });
+
+  it("puts lifted fills first, then related sentences, and keeps every sentence for show-all", () => {
+    const s = blankSuggestions({ template: beery, blankIndex: 3, label: "how", examples: [example], pronoun: "he" });
+    expect(s.fills).toEqual(["with wobbly lines and lost the diagonal forms, drawing the triangle with rounded corners"]);
+    expect(s.sentences.every((x) => /forms|copied/i.test(x))).toBe(true);
+    expect(s.all.length).toBe(4);
+    const none = blankSuggestions({ template: undefined, blankIndex: 0, label: "x", examples: undefined, pronoun: "he" });
+    expect(none).toEqual({ fills: [], sentences: [], all: [] });
+  });
+
+  it("finds the Beery and screen fills in the ready-made OT template's own examples", () => {
+    const setup = allTicked("g25");
+    const beerySection = packSections(pack, setup).find((s) => s.id === "beery")!;
+    const overall = beerySection.blocks.find((b) => b.id === "overall")!;
+    expect(liftFills(overall.text, 0, beerySection.examples, "she")).toEqual(["below average", "average"]);
+    const screen = packSections(pack, setup).find((s) => s.id === "screen-g25")!;
+    const grasp = screen.blocks.find((b) => b.id === "g25-grasp")!;
+    expect(liftFills(grasp.text, 0, screen.examples, "he")).toEqual(["left-handed"]);
+    expect(liftFills(grasp.text, 1, screen.examples, "he")).toEqual(["thumb wrap"]);
   });
 });

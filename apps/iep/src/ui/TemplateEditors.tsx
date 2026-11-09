@@ -6,7 +6,7 @@ import { cloneGrid, newGridId, sameGrid, type GridDef, type GridGroup, type Grid
 import type { PackAssessment, PackCondition } from "../report/pack";
 import type { ReadyMadeAssessment } from "../report/premade/assessments";
 import { fromEditable, toEditable } from "../report/render";
-import { GRADE_GROUPS, type Block, type GradeGroup, type ReportType } from "../report/types";
+import { GOAL_AREAS, GRADE_GROUPS, TEACHER_AREAS, type Block, type GoalArea, type ReportType, type ServiceType, type TeacherAreas } from "../report/types";
 import { Modal, confirmAction } from "./common";
 import { useApp } from "./state";
 
@@ -30,6 +30,7 @@ export const LIST_LABELS: Record<string, string> = {
   percent: "Percent of opportunities",
   dataDates: "Data collection dates",
   beeryDescriptor: "Beery descriptor",
+  range: "Range, in lowercase",
   functionalOrConcern: "Functional or a concern",
 };
 
@@ -63,12 +64,151 @@ function ExamplesEditor({ value, onChange }: { value: string[]; onChange: (v: st
   );
 }
 
+/** An assessment of the pack, for "only when this assessment is done" conditions. */
+export interface AssessmentOption {
+  id: string;
+  label: string;
+}
+
+/**
+ * When a section or paragraph appears: report type, result and grades up
+ * front, the rest (services, teacher checklist areas, standards, assessments
+ * done) under "More conditions". Nothing set means always.
+ */
+export function ConditionEditor({ value, onChange, assessments = [] }: { value: PackCondition | undefined; onChange: (c: PackCondition | undefined) => void; assessments?: AssessmentOption[] }) {
+  const c: PackCondition = value ?? {};
+  const set = (patch: Partial<PackCondition>) => {
+    const next: PackCondition = { ...c, ...patch };
+    for (const k of Object.keys(next) as (keyof PackCondition)[]) if (next[k] === undefined) delete next[k];
+    onChange(Object.keys(next).length ? next : undefined);
+  };
+  const yesNo = (v: boolean | undefined) => (v === undefined ? "" : v ? "yes" : "no");
+  const fromYesNo = (v: string) => (v === "" ? undefined : v === "yes");
+  const setArea = (id: keyof TeacherAreas, v: string) => {
+    const areas: Partial<TeacherAreas> = { ...(c.teacherAreas ?? {}) };
+    if (v === "") delete areas[id];
+    else areas[id] = v === "yes";
+    set({ teacherAreas: Object.keys(areas).length ? areas : undefined });
+  };
+  const setAssessment = (id: string, v: string) => {
+    const on: Record<string, boolean> = { ...(c.assessments ?? {}) };
+    if (v === "") delete on[id];
+    else on[id] = v === "yes";
+    set({ assessments: Object.keys(on).length ? on : undefined });
+  };
+  const more = c.serviceType !== undefined || c.teacherAreas !== undefined || c.anyTeacherArea !== undefined || c.goalArea !== undefined || c.assessments !== undefined;
+  return (
+    <>
+      <div className="grid2">
+        <label className="field">
+          <span className="field-label">In which report</span>
+          <select value={c.reportType ?? ""} onChange={(e) => set({ reportType: (e.target.value || undefined) as ReportType | undefined })}>
+            <option value="">Both</option>
+            <option value="evaluation">Evaluation only</option>
+            <option value="annual">Annual review only</option>
+          </select>
+        </label>
+        <label className="field">
+          <span className="field-label">With which result</span>
+          <select value={yesNo(c.concerns)} onChange={(e) => set({ concerns: fromYesNo(e.target.value) })}>
+            <option value="">Either</option>
+            <option value="yes">Concerns found / qualifies</option>
+            <option value="no">No concerns / does not qualify</option>
+          </select>
+        </label>
+      </div>
+      <div className="field">
+        <span className="field-label">Only for these grades (none ticked means all)</span>
+        <span className="row gap wrap">
+          {GRADE_GROUPS.map((g) => (
+            <label key={g.id} className="check">
+              <input
+                type="checkbox"
+                checked={c.grades?.includes(g.id) ?? false}
+                onChange={(e) => {
+                  const grades = e.target.checked ? [...(c.grades ?? []), g.id] : (c.grades ?? []).filter((x) => x !== g.id);
+                  set({ grades: grades.length ? grades : undefined });
+                }}
+              />{" "}
+              {g.label}
+            </label>
+          ))}
+        </span>
+      </div>
+      <details className="cond-more" open={more}>
+        <summary>More conditions: services, teacher checklist areas, standards, assessments done</summary>
+        <div className="cond-row">
+          <label>
+            Services
+            <select value={c.serviceType ?? ""} onChange={(e) => set({ serviceType: (e.target.value || undefined) as ServiceType | undefined })}>
+              <option value="">Either</option>
+              <option value="direct">Direct only</option>
+              <option value="indirect">Indirect only</option>
+            </select>
+          </label>
+          <label>
+            Standard chosen under the goal
+            <select value={c.goalArea ?? ""} onChange={(e) => set({ goalArea: (e.target.value || undefined) as GoalArea | undefined })}>
+              <option value="">Any</option>
+              {GOAL_AREAS.map((g) => (
+                <option key={g.id} value={g.id}>{g.label}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <span className="field-label">Teacher checklist areas (the “Concerns in” ticks)</span>
+        <div className="cond-row">
+          {TEACHER_AREAS.map((t) => (
+            <label key={t.id}>
+              {t.label}
+              <select value={yesNo(c.teacherAreas?.[t.id])} onChange={(e) => setArea(t.id, e.target.value)}>
+                <option value="">Either</option>
+                <option value="yes">Ticked</option>
+                <option value="no">Not ticked</option>
+              </select>
+            </label>
+          ))}
+          <label>
+            At least one area
+            <select value={yesNo(c.anyTeacherArea)} onChange={(e) => set({ anyTeacherArea: fromYesNo(e.target.value) })}>
+              <option value="">Either</option>
+              <option value="yes">Ticked</option>
+              <option value="no">None ticked</option>
+            </select>
+          </label>
+        </div>
+        {assessments.length > 0 && (
+          <>
+            <span className="field-label">Assessments done (the “What did you do?” ticks)</span>
+            <div className="cond-row">
+              {assessments.map((a) => (
+                <label key={a.id}>
+                  {a.label}
+                  <select value={yesNo(c.assessments?.[a.id])} onChange={(e) => setAssessment(a.id, e.target.value)}>
+                    <option value="">Either</option>
+                    <option value="yes">Done</option>
+                    <option value="no">Not done</option>
+                  </select>
+                </label>
+              ))}
+            </div>
+          </>
+        )}
+      </details>
+    </>
+  );
+}
+
 /** What an edit to one paragraph changes; a field left out is unchanged. */
 export interface BlockEdit {
   text?: string;
   label?: string;
   examples?: string[];
   hidden?: boolean;
+  /** When the paragraph appears; null clears the condition. */
+  when?: PackCondition | null;
+  /** A tick box under its assessment. */
+  optional?: boolean;
 }
 
 /**
@@ -85,6 +225,10 @@ export function EditBlockModal({
   sectionExamples,
   listNames = Object.keys(OPTION_LISTS),
   hideLabel = "Hide this paragraph",
+  when,
+  optional,
+  inAssessment = false,
+  assessments,
   onSave,
   onSaveSectionExamples,
   onReset,
@@ -103,6 +247,14 @@ export function EditBlockModal({
   listNames?: string[];
   /** What the hide button says (a pack deletes the paragraph instead). */
   hideLabel?: string;
+  /** The paragraph's own condition, editable when given (packs). */
+  when?: PackCondition;
+  /** Whether it is a tick box under its assessment. */
+  optional?: boolean;
+  /** Tick boxes only make sense inside an assessment. */
+  inAssessment?: boolean;
+  /** The pack's assessments, for conditions; absent means conditions cannot be edited here. */
+  assessments?: AssessmentOption[];
   onSave: (o: BlockEdit) => void;
   onSaveSectionExamples: (ex: string[]) => void;
   onReset: () => void;
@@ -117,6 +269,8 @@ export function EditBlockModal({
   const [examples, setExamples] = useState<string[]>(examplesFromSection ? sectionExamples : (current.examples ?? []));
   const [blankLabel, setBlankLabel] = useState("");
   const [blankList, setBlankList] = useState("");
+  const [cond, setCond] = useState<PackCondition | undefined>(when);
+  const [tick, setTick] = useState(!!optional);
   const area = useRef<HTMLTextAreaElement>(null);
 
   const insertBlank = () => {
@@ -149,6 +303,10 @@ export function EditBlockModal({
     if (examplesFromSection) onSaveSectionExamples(cleaned);
     else if (JSON.stringify(cleaned) !== JSON.stringify(original.examples ?? [])) next.examples = cleaned;
     else delete next.examples;
+    if (assessments) {
+      next.when = cond ?? null;
+      if (inAssessment) next.optional = tick;
+    }
     onSave(next);
     onClose();
   };
@@ -196,6 +354,19 @@ export function EditBlockModal({
       </p>
       <ExamplesEditor value={examples} onChange={setExamples} />
       <PrivacyNote texts={[text, ...examples]} />
+
+      {assessments && (
+        <>
+          <h3 className="ex-title">When it appears</h3>
+          <p className="hint">Leave everything as “Both”, “Either” and “Any” for a paragraph that is always in the report.</p>
+          <ConditionEditor value={cond} onChange={setCond} assessments={assessments} />
+          {inAssessment && (
+            <label className="check">
+              <input type="checkbox" checked={tick} onChange={(e) => setTick(e.target.checked)} /> A tick box under this assessment on the “What did you do?” list: in the report only when ticked
+            </label>
+          )}
+        </>
+      )}
 
       <div className="row gap between wrap modal-actions">
         <span className="row gap">
@@ -373,6 +544,7 @@ export interface SectionSettings {
 export function SectionSettingsModal({
   initial,
   inAssessment,
+  assessments,
   onSave,
   onDelete,
   onClose,
@@ -381,22 +553,17 @@ export function SectionSettingsModal({
   initial?: SectionSettings;
   /** Sections inside an assessment have no "before/after" place. */
   inAssessment: boolean;
+  assessments?: AssessmentOption[];
   onSave: (s: SectionSettings) => void;
   onDelete?: () => void;
   onClose: () => void;
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [place, setPlace] = useState<"before" | "after">(initial?.place ?? "after");
-  const [reportType, setReportType] = useState<"" | ReportType>(initial?.when?.reportType ?? "");
-  const [concerns, setConcerns] = useState<"" | "yes" | "no">(initial?.when?.concerns === undefined ? "" : initial.when.concerns ? "yes" : "no");
-  const [grades, setGrades] = useState<GradeGroup[]>(initial?.when?.grades ?? []);
+  const [when, setWhen] = useState<PackCondition | undefined>(initial?.when);
   const [notesHint, setNotesHint] = useState(initial?.notesHint ?? "");
   const save = () => {
-    const when: PackCondition = {};
-    if (reportType) when.reportType = reportType;
-    if (concerns) when.concerns = concerns === "yes";
-    if (grades.length) when.grades = grades;
-    onSave({ title: title.trim(), place, ...(Object.keys(when).length ? { when } : {}), notesHint: notesHint.trim() });
+    onSave({ title: title.trim(), place, ...(when ? { when } : {}), notesHint: notesHint.trim() });
     onClose();
   };
   return (
@@ -414,34 +581,7 @@ export function SectionSettingsModal({
           </select>
         </label>
       )}
-      <div className="grid2">
-        <label className="field">
-          <span className="field-label">In which report</span>
-          <select value={reportType} onChange={(e) => setReportType(e.target.value as "" | ReportType)}>
-            <option value="">Both</option>
-            <option value="evaluation">Evaluation only</option>
-            <option value="annual">Annual review only</option>
-          </select>
-        </label>
-        <label className="field">
-          <span className="field-label">With which result</span>
-          <select value={concerns} onChange={(e) => setConcerns(e.target.value as "" | "yes" | "no")}>
-            <option value="">Either</option>
-            <option value="yes">Concerns found / qualifies</option>
-            <option value="no">No concerns / does not qualify</option>
-          </select>
-        </label>
-      </div>
-      <div className="field">
-        <span className="field-label">Only for these grades (none ticked means all)</span>
-        <span className="row gap wrap">
-          {GRADE_GROUPS.map((g) => (
-            <label key={g.id} className="check">
-              <input type="checkbox" checked={grades.includes(g.id)} onChange={(e) => setGrades(e.target.checked ? [...grades, g.id] : grades.filter((x) => x !== g.id))} /> {g.label}
-            </label>
-          ))}
-        </span>
-      </div>
+      <ConditionEditor value={when} onChange={setWhen} assessments={assessments} />
       <label className="field">
         <span className="field-label">Notes the AI prompt asks you to paste (leave empty for fixed wording with no prompt)</span>
         <input value={notesHint} onChange={(e) => setNotesHint(e.target.value)} placeholder="e.g. The scores and what you observed" />

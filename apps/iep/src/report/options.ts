@@ -43,7 +43,7 @@ export const OPTION_LISTS: Record<string, OptionList> = {
     ],
   },
   minutes: {
-    options: ["15 minutes quarterly", "30 minutes quarterly", "15 minutes monthly", "30 minutes monthly", "60 minutes monthly", "120 minutes monthly", "30 minutes weekly", "60 minutes weekly", "90 minutes weekly"],
+    options: ["15 minutes quarterly", "30 minutes quarterly", "20 minutes semesterly", "30 minutes semesterly", "15 minutes monthly", "30 minutes monthly", "60 minutes monthly", "120 minutes monthly", "30 minutes weekly", "60 minutes weekly", "90 minutes weekly"],
   },
   location: { options: ["outside the classroom", "inside the classroom", "both inside and outside the classroom"] },
   skillAreas: {
@@ -114,6 +114,7 @@ export const OPTION_LISTS: Record<string, OptionList> = {
   percent: { options: ["70", "75", "80", "85", "90"] },
   dataDates: { options: ["3 out of 4", "4 out of 5", "2 out of 3"] },
   beeryDescriptor: { options: ["Very Low", "Low", "Below Average", "Average", "Above Average", "High", "Very High"] },
+  range: { options: ["very low", "low", "below average", "average", "above average", "high", "very high"] },
   functionalOrConcern: { options: ["functional", "an area of concern"] },
 };
 

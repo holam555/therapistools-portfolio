@@ -138,8 +138,7 @@ export function WhatIsStored() {
         paragraphs are hidden), so it follows you to another browser or computer.
       </p>
       <p className="hint">
-        <strong>Never in your account:</strong> the report you are writing, the blanks you filled, ratings, recipes and your sentence library.
-        Those stay in this browser only. The privacy check runs before every save and holds the template back if it finds a date, phone number
+        <strong>Never in your account:</strong> the report you are writing, the blanks you filled and your ratings. Those stay in this browser only. The privacy check runs before every save and holds the template back if it finds a date, phone number
         or email address.
       </p>
     </div>

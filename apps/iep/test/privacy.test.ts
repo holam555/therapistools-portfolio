@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assemble, assembledToText, emptyBuilderState } from "../src/model/assemble";
 import { starterLibrary } from "../src/model/defaults";
-import { buildPrompt } from "../src/model/prompt";
 import { buildAllowList, scanForLibrary, scanText } from "../src/model/privacy";
 
 const lib = { ...starterLibrary(), neverAllow: ["Example Elementary", "Room 12"] };
@@ -36,29 +34,9 @@ describe("privacy scan", () => {
     expect(scan("[STUDENT] reversed B, D and Z. [[line_type]] within 1/8 inch.").length).toBe(0);
   });
 
-  it("produces no warnings for a fully-filled starter draft and its AI prompt", () => {
-    const cutting = lib.domains[0].tasks.find((t) => t.name === "Cutting")!;
-    const s = cutting.sentences[2];
-    const state = { ...emptyBuilderState(), taskIds: [cutting.id], sentenceIds: cutting.sentences.map((x) => x.id), values: { [s.id]: { "line_type#0": "curved line", "accuracy#0": "80%", "trials#0": "4 out of 5" } } };
-    const a = assemble(lib, state);
-    expect(scanForLibrary(assembledToText(a), lib)).toEqual([]);
-    expect(scanForLibrary(buildPrompt(lib, a), lib)).toEqual([]);
-  });
-
-  it("produces no warnings for a prompt whose blanks are all filled", () => {
-    const cutting = lib.domains[0].tasks.find((t) => t.name === "Cutting")!;
-    const s = cutting.sentences[1];
-    const state = { ...emptyBuilderState(), taskIds: [cutting.id], sentenceIds: [s.id], values: { [s.id]: { "shape#0": "circle" } } };
-    const p = buildPrompt(lib, assemble(lib, state));
-    expect(p).toContain("Blanks to fill: none.");
-    expect(scanForLibrary(p, lib)).toEqual([]);
-  });
-
-  it("catches a name typed into a blank", () => {
-    const cutting = lib.domains[0].tasks.find((t) => t.name === "Cutting")!;
-    const s = cutting.sentences[1]; // "{{They}} cut a {{shape}} without deviation."
-    const state = { ...emptyBuilderState(), taskIds: [cutting.id], sentenceIds: [s.id], values: { [s.id]: { "shape#0": "heart for Ms. Rivera" } } };
-    const w = scanForLibrary(assembledToText(assemble(lib, state)), lib);
+  it("catches a name typed into a blank, but not the library's own wording", () => {
+    const w = scanForLibrary("During cutting tasks, he cut a heart for Ms. Rivera without deviation.", lib);
     expect(w.some((x) => x.kind === "name" && x.text.includes("Rivera"))).toBe(true);
+    expect(scanForLibrary("During cutting tasks, he cut a heart without deviation.", lib)).toEqual([]);
   });
 });

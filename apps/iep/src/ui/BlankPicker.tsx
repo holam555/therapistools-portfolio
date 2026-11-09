@@ -1,23 +1,29 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PronounSet } from "../model/types";
 import { KIND_LABEL } from "../model/privacy";
 import { scanReportText } from "../report/privacy-words";
 import { joinList, type OptionList } from "../report/options";
 import type { BlankInfo } from "../report/render";
-import { fitToBlank, sampleSentences } from "../report/samples";
+import { blankSuggestions, fitToBlank } from "../report/samples";
 import { useApp } from "./state";
 
 export interface PickerTarget {
   info: BlankInfo;
   current: string;
   examples: string[] | undefined;
+  /** The paragraph's wording with its marks, so examples that follow it can be read for this blank. */
+  template?: string;
   rect: DOMRect;
 }
 
+/** "section/block/n" → n, which blank of its paragraph this is. */
+const blankIndexOf = (key: string) => Number(key.split("/").pop()) || 0;
+
 /**
  * The little panel that opens on a yellow blank: ready-made choices when the
- * blank has a list, sample sentences from the writer's own examples otherwise,
- * and always a box to type your own.
+ * blank has a list; otherwise what the examples put in this very spot, then
+ * sentences that relate to it, with every sentence a click away; and always a
+ * box to type your own.
  */
 export function BlankPicker({
   target,
@@ -38,9 +44,13 @@ export function BlankPicker({
   onEditSamples?: () => void;
 }) {
   const { lib } = useApp();
-  const { info, current, examples, rect } = target;
+  const { info, current, examples, template, rect } = target;
   const list = info.list ? lists(info.list) : undefined;
-  const samples = list ? [] : sampleSentences(examples, pronoun);
+  const suggestions = useMemo(
+    () => (list ? { fills: [], sentences: [], all: [] } : blankSuggestions({ template, blankIndex: blankIndexOf(info.key), label: info.label, examples, pronoun })),
+    [list, template, info.key, info.label, examples, pronoun],
+  );
+  const [showAll, setShowAll] = useState(false);
   const [text, setText] = useState(current);
   const [picked, setPicked] = useState<string[]>(() => (list?.multi ? list.options.filter((o) => current.includes(o)) : []));
   const ref = useRef<HTMLDivElement>(null);
@@ -82,6 +92,11 @@ export function BlankPicker({
     onClose();
   };
 
+  const { fills, sentences, all } = suggestions;
+  const shownSentences = showAll ? all : sentences;
+  const hiddenCount = all.length - sentences.length;
+  const anySamples = fills.length > 0 || all.length > 0;
+
   return (
     <div
       ref={ref}
@@ -115,10 +130,10 @@ export function BlankPicker({
         </div>
       )}
 
-      {samples.length > 0 && (
+      {fills.length > 0 && (
         <div className="bp-samples">
-          <div className="bp-sub">From your examples</div>
-          {samples.map((s) => (
+          <div className="bp-sub">In this spot, your examples say</div>
+          {fills.map((s) => (
             <button key={s} type="button" className="bp-sample" onClick={() => choose(fitToBlank(s, info.periodAfter))}>
               {s}
             </button>
@@ -126,8 +141,26 @@ export function BlankPicker({
         </div>
       )}
 
+      {(shownSentences.length > 0 || (showAll && all.length > 0)) && (
+        <div className="bp-samples">
+          <div className="bp-sub">{showAll ? "Every sentence in your examples" : "Related sentences from your examples"}</div>
+          {shownSentences.map((s) => (
+            <button key={s} type="button" className="bp-sample" onClick={() => choose(fitToBlank(s, info.periodAfter))}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+      {!list && hiddenCount > 0 && (
+        <div className="hint">
+          <button type="button" className="link" onClick={() => setShowAll(!showAll)}>
+            {showAll ? "Show only related sentences" : sentences.length || fills.length ? `Show all ${all.length} sentences` : `Nothing matches this blank. Show all ${all.length} sentences`}
+          </button>
+        </div>
+      )}
+
       <div className="bp-free">
-        <div className="bp-sub">{list || samples.length ? "Or type your own" : "Type it in"}</div>
+        <div className="bp-sub">{list || anySamples ? "Or type your own" : "Type it in"}</div>
         <textarea
           rows={2}
           value={text}
@@ -159,7 +192,7 @@ export function BlankPicker({
             <button type="button" className="link" onClick={() => onEditList(info.list!)}>Edit these choices</button>
           ) : (
             onEditSamples && (
-              <button type="button" className="link" onClick={onEditSamples}>{samples.length ? "Edit sample sentences" : "Add sample sentences"}</button>
+              <button type="button" className="link" onClick={onEditSamples}>{anySamples ? "Edit sample sentences" : "Add sample sentences"}</button>
             )
           )}
         </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blankPack, conditionHolds, findSection, moveInList, newPackId, normalizePack, optionalBlocks, packGrids, packSections, packUses, updateBlock, updateSection, withFreshIds, type TemplatePack } from "../src/report/pack";
+import { blankPack, conditionHolds, describeCondition, findSection, moveInList, newPackId, normalizePack, optionalBlocks, packGrids, packSections, packUses, updateBlock, updateSection, withFreshIds, type TemplatePack } from "../src/report/pack";
 import { adlChecklist, readyMadeAssessments } from "../src/report/premade/assessments";
 import { premadePack } from "../src/report/premade";
 import { sectionText } from "../src/report/render";
@@ -205,5 +205,43 @@ describe("pack plumbing", () => {
     expect(p.assessments[0].grid!.layout).toBe("byLevel");
     expect(p.sections[0]).toEqual({ id: "s1", title: "T", blocks: [], examples: [], when: { grades: ["k1"] } });
     expect(p.lists).toEqual({ ok: { options: ["a"] } });
+  });
+});
+
+describe("edit mode shows every paragraph", () => {
+  const pack = premadePack("ot");
+
+  it("keeps hidden paragraphs with the reason, while the report itself leaves them out", () => {
+    const setup: ReportSetup = { ...defaultSetup("g25"), serviceType: "direct", screenItems: ["g25-near"] };
+    const plain = packSections(pack, setup);
+    const edit = packSections(pack, setup, { showHidden: true });
+    expect(edit.map((s) => s.id)).toEqual(plain.map((s) => s.id));
+    const service = edit.find((s) => s.id === "service")!;
+    const indirect = service.blocks.find((b) => b.id === "indirect")!;
+    expect(indirect).toMatchObject({ hidden: true, hiddenWhy: "indirect services" });
+    expect(service.blocks.find((b) => b.id === "direct")!.hidden).toBeUndefined();
+    expect(plain.find((s) => s.id === "service")!.blocks.map((b) => b.id)).toEqual(["intro", "direct", "accommodations"]);
+    const screen = edit.find((s) => s.id === "screen-g25")!;
+    const grasp = screen.blocks.find((b) => b.id === "g25-grasp")!;
+    expect(grasp).toMatchObject({ hidden: true, hiddenWhy: "unticked under “What did you do?”" });
+    expect(screen.blocks.find((b) => b.id === "g25-near")!.hidden).toBeUndefined();
+    // A subheading whose items are all unticked is marked hidden too, and comes back when one is ticked.
+    expect(screen.blocks.find((b) => b.id === "h-tools")).toMatchObject({ hidden: true });
+    expect(screen.blocks.find((b) => b.id === "h-handwriting")!.hidden).toBeUndefined();
+    expect(sectionText(plain.find((s) => s.id === "screen-g25")!, "he")).not.toContain("Scissors and tools");
+    // Objectives: the report writes one per objective; edit mode shows the hidden template line once.
+    const goal = edit.find((s) => s.id === "goal")!;
+    expect(goal.blocks.filter((b) => b.sourceId === "objective").length).toBe(3);
+    const writing = goal.blocks.find((b) => b.id === "standard-selfcare")!;
+    expect(writing).toMatchObject({ hidden: true, hiddenWhy: "self care standard chosen" });
+  });
+
+  it("describes conditions in words", () => {
+    expect(describeCondition(undefined)).toBe("");
+    expect(describeCondition({ reportType: "annual", concerns: false })).toBe("annual review only · no concerns / does not qualify");
+    expect(describeCondition({ grades: ["k1", "g25"], serviceType: "indirect" })).toBe("grades K–1, 2–5 · indirect services");
+    expect(describeCondition({ teacherAreas: { sensory: false }, anyTeacherArea: true })).toBe("sensory not ticked · at least one teacher area ticked");
+    expect(describeCondition({ assessments: { spm2: true, teacher: false } }, pack)).toBe("SPM-2 School form done · Teacher rating checklist not done");
+    expect(describeCondition({ goalArea: "writing" })).toBe("writing standard chosen");
   });
 });

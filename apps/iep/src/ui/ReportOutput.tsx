@@ -38,6 +38,7 @@ export interface OutputEdit {
 export function ReportOutput({
   title,
   sections,
+  previewSections,
   reportType,
   grade,
   pronoun,
@@ -56,6 +57,8 @@ export function ReportOutput({
 }: {
   title: string;
   sections: ReportSection[];
+  /** What the preview shows instead of `sections` (edit mode: every paragraph, hidden ones marked). Word and prompts always use `sections`. */
+  previewSections?: ReportSection[];
   reportType: ReportType;
   grade: GradeGroup;
   pronoun: PronounSet;
@@ -96,11 +99,12 @@ export function ReportOutput({
     say(ok ? `Copied the prompt for “${s.title}”. Paste it into Gemini and add your notes.` : "Could not copy. Try again.");
   };
 
-  const openPicker = (run: Run, examples: string[] | undefined, el: HTMLElement) => {
+  const openPicker = (run: Run, examples: string[] | undefined, el: HTMLElement, template?: string) => {
     const info = run.blank ?? run.filled;
     if (!info) return;
-    setPicker({ info, current: run.filled ? run.text : "", examples, rect: el.getBoundingClientRect() });
+    setPicker({ info, current: run.filled ? run.text : "", examples, template, rect: el.getBoundingClientRect() });
   };
+  const shown = previewSections ?? sections;
 
   return (
     <div className="report-out">
@@ -134,8 +138,8 @@ export function ReportOutput({
         )}
         <div className={`doc-preview ${editMode ? "editing" : ""}`} aria-label="Preview">
           <h3 className="doc-title">{title}</h3>
-          {sections.length === 0 && <p className="hint">Nothing to show yet: turn on Edit template and add a section or an assessment.</p>}
-          {sections.map((s) => (
+          {shown.length === 0 && <p className="hint">Nothing to show yet: turn on Edit template and add a section or an assessment.</p>}
+          {shown.map((s) => (
             <div key={s.id} className="doc-section">
               <h4>
                 {editMode && (
@@ -306,7 +310,7 @@ function PreviewBlocks({
   section: ReportSection;
   pronoun: PronounSet;
   values: ReportValues;
-  onOpen: (run: Run, examples: string[] | undefined, el: HTMLElement) => void;
+  onOpen: (run: Run, examples: string[] | undefined, el: HTMLElement, template?: string) => void;
   /** Present in edit mode. */
   onEdit?: (blockKey: string) => void;
   /** Present in edit mode: open the editor for the grid a generated line is written from. */
@@ -318,8 +322,10 @@ function PreviewBlocks({
     <>
       {blocks.map((b, i) => {
         const examples = b.examples ?? section.examples;
+        const src = section.blocks[i];
+        const template = src.pattern ?? src.text;
         const text = b.runs.map((r, j) =>
-          r.blank || r.filled ? (
+          (r.blank || r.filled) && !src.hidden ? (
             // A span, not a button: buttons can't wrap inline with the sentence around them.
             <span
               key={j}
@@ -328,11 +334,11 @@ function PreviewBlocks({
               className={r.blank ? "blank-btn" : "filled-btn"}
               title={r.blank ? "Click to fill" : "Click to change"}
               aria-label={r.blank ? `Fill in: ${r.blank.label}` : `${r.filled!.label}: ${r.text}. Change`}
-              onClick={(e) => onOpen(r, examples, e.currentTarget)}
+              onClick={(e) => onOpen(r, examples, e.currentTarget, template)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  onOpen(r, examples, e.currentTarget);
+                  onOpen(r, examples, e.currentTarget, template);
                 }
               }}
             >
@@ -343,7 +349,8 @@ function PreviewBlocks({
           ),
         );
         const label = b.label ? <strong>{b.label}{b.kind === "bullet" ? " – " : ": "}</strong> : null;
-        const src = section.blocks[i];
+        const hidden = src.hidden ? <span className="badge badge-muted doc-hidden-why" title="Left out of this report. Click ✎ to change its wording or when it appears.">Hidden: {src.hiddenWhy}</span> : null;
+        const cls = src.hidden ? " doc-hidden" : "";
         const pencil =
           onEdit && (!src.generated || src.pattern !== undefined) ? (
             <button
@@ -366,10 +373,10 @@ function PreviewBlocks({
               ✎
             </button>
           ) : null;
-        if (b.kind === "subheading" || b.kind === "heading") return <p key={i} className="doc-sub">{pencil}{text}</p>;
-        if (b.kind === "bullet") return <p key={i} className="doc-bullet">{pencil}• {label}{text}</p>;
-        if (b.kind === "numbered") return <p key={i} className="doc-bullet">{pencil}{++n}. {text}</p>;
-        return <p key={i} className="doc-para">{pencil}{label}{text}</p>;
+        if (b.kind === "subheading" || b.kind === "heading") return <p key={i} className={`doc-sub${cls}`}>{pencil}{hidden}{text}</p>;
+        if (b.kind === "bullet") return <p key={i} className={`doc-bullet${cls}`}>{pencil}{hidden}• {label}{text}</p>;
+        if (b.kind === "numbered") return <p key={i} className={`doc-bullet${cls}`}>{pencil}{hidden}{src.hidden ? "" : `${++n}. `}{text}</p>;
+        return <p key={i} className={`doc-para${cls}`}>{pencil}{hidden}{label}{text}</p>;
       })}
     </>
   );

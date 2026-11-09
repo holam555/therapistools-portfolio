@@ -36,7 +36,7 @@ which to keep. After that, a template saved in the browser goes up about a
 second after the last edit.
 
 **The privacy gate.** Before any upload, the template's text runs through the
-same scanner as the Output tab. A full date, phone number, email address or
+same scanner as the blank picker and template editors. A full date, phone number, email address or
 word on the writer's never-allow list holds the template back (the status
 says so and lists them). Unknown capitalised words are shown but do not
 block, because test and product names land there too.

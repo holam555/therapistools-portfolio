@@ -1,6 +1,5 @@
 import type { Library } from "./types";
 import { allSentences } from "./library";
-import { promptTemplate } from "./prompt";
 
 /**
  * Phase 5: warn (never block) about text that looks like personal information
@@ -67,7 +66,7 @@ export function buildAllowList(lib: Library): Set<string> {
     add(v.label);
     for (const p of v.presets) add(p);
   }
-  add(promptTemplate(lib));
+
   return allow;
 }
 

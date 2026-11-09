@@ -1,6 +1,6 @@
 # IEP Writer (Therapistools)
 
-A private tool for writing IEP sections from your own sentence templates.
+A private tool for drafting IEP reports from a template you own.
 Everything runs inside your web browser on this computer. Signing in is
 optional: an account stores your report template and nothing else, so it
 follows you to another computer (docs/ACCOUNTS.md at the repository root).
@@ -27,53 +27,55 @@ text becomes blanks, red or italic instructions become hints, and names,
 dates of birth and other identifying lines are left out, then you check the
 result before using it) or **start blank**. Turn on **Edit template** to add
 assessments (with or without a rating table), sections and paragraphs, change
-any wording, and set when a section appears (evaluation or annual review, with
-or without concerns, which grades). The template is saved in this browser and
-in Settings → Backup. Nothing is sent anywhere; there is no AI in this step.
+any wording, and set when a section or paragraph appears (evaluation or annual
+review, with or without concerns, which grades, direct or indirect services,
+which teacher checklist areas are ticked, which assessments were done). In edit
+mode every paragraph of the template is shown; the ones this report leaves out
+are greyed with the reason, so they can still be edited. The template is saved
+in this browser and in Settings → Backup. Nothing is sent anywhere; there is
+no AI in this step.
+
+Clicking a yellow blank opens a picker. For a blank with a dropdown it lists
+the choices. Otherwise it reads the paragraph's own wording as a pattern over
+the sample sentences and offers what they put in that very spot ("82",
+"left-handed", "too hard"), then sentences that share words with the blank,
+with every sentence one click away.
 
 ## Disciplines
 
 On first use you pick a discipline: occupational therapy, speech-language
 pathology, physical therapy, school psychology, special education teaching, or
-another K-12 role. Each keeps its own sentence bank, recipes and draft, and
-you can switch any time from the header or Settings. Occupational therapy
-starts with a starter library; the others start empty, and Import can turn an
-old report into sentences.
+another K-12 role. Each keeps its own template, filled blanks and setup, and
+you can switch any time from the header or Settings.
 
 ## Open the app (everyday use)
 
 1. Open the `easyiep` folder, then the `dist` folder inside it.
 2. Double-click `easyiep.html`. It opens in your browser (use Chrome).
 
-That's it. Your library is saved inside Chrome on this computer automatically.
+That's it. Your template is saved inside Chrome on this computer
+automatically, and in your account if you sign in.
 
-> **Back up regularly.** Settings → Backup → **Export JSON** saves your whole
-> library to a file. If Chrome's site data is ever cleared, the library in the
-> browser is gone, and the backup file is how you get it back (Settings →
-> Backup → **Import JSON**).
+> **Back up regularly.** Settings → Backup → **Export backup file** saves
+> your template to a file. If Chrome's site data is ever cleared, the
+> template in the browser is gone, and the backup file (or your account) is
+> how you get it back (Settings → Backup → **Restore from a file**).
 
 ## What each tab does
 
-- **Library** — your sentences, organised by domain → task. Edit, duplicate,
-  reorder, search and filter. Highlighted words: blue is filled in for you
-  (student, he/she), yellow is a blank you fill in later, pink is a blank with
-  no preset choices yet.
-- **Import** — paste a chunk of an old report or template; it is split into
-  sentences you tag with a domain, task and section. `XX` becomes the student
-  token and he/she can be swapped for pronoun tokens in one click.
-- **Builder** — pick pronouns, grade band, domains and tasks; tick sentences;
-  fill the blanks from your preset lists or type your own. The preview updates
-  live and the draft is saved as you go. Save a selection as a **recipe** to
-  reuse it.
-- **Output** — copy each section, copy everything, download a Word file, or
-  build a prompt for an AI chatbot that fills the remaining blanks from your
-  notes without changing your wording. A **privacy check** warns about anything
-  that looks like a name, date, phone number, email, or a word on your
-  never-allow list. It warns only; nothing is blocked.
-- **Settings** — IEP sections, grade bands, blanks and their presets, the AI
-  prompt wording, the never-allow list, and backup (export/import JSON).
+- **Report** — set up the report, tick what you did, rate checklists, fill
+  the blanks, download the Word draft, copy one AI prompt per section, and
+  edit the template.
+- **Settings** — privacy, the optional account, the discipline, backup and
+  restore of the template, the never-allow list for the privacy check, and
+  start over. The **privacy check** warns when text typed into a blank or the
+  template looks like a name, date, phone number, email, or a word on your
+  never-allow list. It warns only; nothing is blocked, except that a template
+  with a date, phone number or email is held back from the account.
 
-Undo any change with the Undo button or Cmd+Z.
+The older Library, Import, Builder and Output tabs (a sentence bank assembled
+into sections) retired on 2026-11-09. A sentence library saved by an earlier
+version stays in the browser and in backup files; nothing shows it any more.
 
 ## Rebuild the app after a code change (developer step)
 
@@ -116,8 +118,11 @@ build bundles any network code.
 
 ## Where things live
 
-- `src/model/` — the data model and all the text logic (templates, splitter,
-  storage). No UI code.
+- `src/model/` — shared text logic (pronoun tokens, splitter, privacy check,
+  storage, disciplines) and the retired sentence library's types. No UI code.
+- `src/report/` — the report builder: template packs, the sample templates,
+  rating grids, rendering, the Word draft, section prompts and the blank
+  picker's suggestions.
 - `src/account/` — the only network code: sign-in and keeping the report
   template in the writer's account. `supabase/migrations/` is the database
   table and its row-level security.

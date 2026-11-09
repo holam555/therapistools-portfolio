@@ -92,8 +92,16 @@ the preview, prompts and Word download. "Build from my document" is plain
 rules, no AI: `report/docx-read.ts` reads a .docx in the browser (jszip +
 DOMParser) or pasted text; `report/import-doc.ts` drafts sections,
 assessments, grids, blanks, dropdowns and hints, and leaves identifying lines
-out; `ui/ImportDocument.tsx` is the review screen. Library, Import, Builder
-and Output still exist and are due to retire.
+out; `ui/ImportDocument.tsx` is the review screen. The old Library, Import,
+Builder and Output tabs retired on 2026-11-09 (git history has them); the
+sentence library is still loaded and saved (`model/storage.ts`) because the
+privacy allow-list and backup files use it. Edit mode shows every paragraph of
+the template, with the ones the setup leaves out greyed and the reason named
+(`packSections(pack, setup, { showHidden: true })`), and each paragraph's
+`when` condition and tick-box flag are editable (`ConditionEditor`). The blank
+picker reads the paragraph's wording as a pattern over the examples and lifts
+out what sits in that blank's spot (`samples.ts`: `liftFills`), then ranks
+sentences by shared words (`relevantSentences`); "show all" keeps every sentence.
 
 ## Definition of done
 
@@ -104,7 +112,13 @@ the changed tool works in `npm run preview`. Pushing to `main` publishes it.
 
 - Worksheets still load fonts from Google Fonts (disclosed on the privacy page).
   Moving them to `shared/fonts` needs print QA of every template first.
-- IEP Writer: retire Library, Import, Builder and Output.
+- IEP Writer: the owner's own template (in their account) still carries
+  wording from the old template that the 2026-11-09 feedback asked to change
+  (hand dominance merged into the grasp line, the accommodations line shown
+  whichever teacher areas are ticked, a Beery "overall" line, an indirect
+  service example); the code's sample has them, the owner edits their own in
+  Edit template. The daily living checklist's form order is unconfirmed: ask
+  the owner for the form.
 - IEP Writer accounts went live on 2026-11-03 (docs/ACCOUNTS.md). The
   owner's own wording is in their account; the code holds a generic sample.
 - Cloudflare Web Analytics is still switched on in the Cloudflare dashboard

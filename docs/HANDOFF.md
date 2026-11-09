@@ -107,7 +107,8 @@ to Vercel, so there are no old addresses to redirect.
   or blank. The owner decided the samples must **not** copy their district
   form, so each was written fresh; the OT sample keeps the usual section
   headings with its own content underneath. The older Library, Import,
-  Builder and Output tabs still exist and are due to retire.
+  Builder and Output tabs retired on 2026-11-09: the app has two tabs,
+  Report and Settings.
 - **The owner's OT wording** was the built-in template until 2026-11-03; it
   is now a pack of their own in their browser and account (ACCOUNTS.md), and
   the code holds only the generic sample. The owner's `IEP template.docx` at the repository root is
@@ -152,7 +153,22 @@ to Vercel, so there are no old addresses to redirect.
    - Done 2026-11-03: pre-made generic templates for the other five
      disciplines (`src/report/premade/`), and the first-visit notice that
      offers sign-in or the sample template.
-   - Then retire the old Library, Import, Builder and Output tabs.
+   - Done 2026-11-09: the old Library, Import, Builder and Output tabs
+     retired; Settings keeps privacy, account, discipline, backup of the
+     template, the never-allow list and start over.
+   - Done 2026-11-09 (owner feedback): edit mode shows paragraphs the
+     setup leaves out, greyed with the reason, and each paragraph's
+     condition ("when it appears") is editable, so a line such as "no
+     sensory concerns" or an accommodations line tied to a teacher area can
+     be found and changed; the blank picker lifts the matching words out of
+     examples that follow the line's wording and ranks sentences by
+     relevance; the OT sample merges handedness into the grasp line
+     ("a right-handed tripod grasp"), adds a Beery "overall" line and an
+     indirect-service paragraph with a sample. The owner's own template is
+     in their account and needs the same edits by hand (see the 2026-11-09
+     message to the owner). Still open: the AD 12 daily living checklist's
+     exact form order; the owner has the form, the code only has a report
+     written from it.
 2. **9–12 fine motor screen,** when the owner sends one.
 3. **Open questions to raise with the owner:** whether the dropdown choices
    (minutes, disability categories, grasp types) fit their district. The

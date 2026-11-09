@@ -23,6 +23,11 @@ export const GRADE_GROUPS: { id: GradeGroup; label: string }[] = [
 ];
 
 export type GoalArea = "writing" | "cutting" | "selfcare";
+export const GOAL_AREAS: { id: GoalArea; label: string }[] = [
+  { id: "writing", label: "Writing" },
+  { id: "cutting", label: "Cutting" },
+  { id: "selfcare", label: "Self care" },
+];
 export type TeacherArea = "fine" | "gross" | "sensory";
 export type TeacherAreas = Record<TeacherArea, boolean>;
 export const TEACHER_AREAS: { id: TeacherArea; label: string }[] = [
@@ -73,6 +78,10 @@ interface BlockBase {
   slots?: Record<string, string>;
   /** For a line written several times from one template paragraph (objectives): that paragraph's id. */
   sourceId?: string;
+  /** Left out of the report by a condition or an unticked tick box; shown only in edit mode so it can still be edited. */
+  hidden?: boolean;
+  /** Why it is hidden, in words ("sensory not ticked"). */
+  hiddenWhy?: string;
 }
 export type Block =
   | ({ kind: "heading" } & BlockBase)

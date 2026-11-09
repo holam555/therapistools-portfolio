@@ -2,21 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { getDiscipline } from "../model/disciplines";
 import type { GridDef } from "../report/grids";
 import {
-  assessmentOn, blankPack, conditionHolds, findSection, loadPack, moveInList, newPackId, optionalBlocks, packGrids, packSections, packUses, savePack, updateBlock, updateSection, withFreshIds,
-  type PackAssessment, type PackBlock, type PackSection, type TemplatePack,
+  assessmentOn, blankPack, conditionHolds, describeCondition, findSection, loadPack, moveInList, newPackId, optionalBlocks, packGrids, packSections, packUses, savePack, updateBlock, updateSection, withFreshIds,
+  type PackAssessment, type PackBlock, type PackBlockExtras, type PackSection, type TemplatePack,
 } from "../report/pack";
 import type { PronounSet } from "../model/types";
 import { premadePack } from "../report/premade";
 import { readyMadeAssessments } from "../report/premade/assessments";
 import { loadSetup, loadValues, saveSetup, saveValues } from "../report/setup";
-import { GRADE_GROUPS, TEACHER_AREAS, type Block, type GoalArea, type ReportSetup, type ReportValues } from "../report/types";
+import { GOAL_AREAS, GRADE_GROUPS, TEACHER_AREAS, type Block, type ReportSetup, type ReportValues } from "../report/types";
 import { ImportDocument } from "./ImportDocument";
 import { RatingPanel, ReportOutput } from "./ReportOutput";
-import { AddAssessmentModal, AddBlockModal, EditBlockModal, GridEditorModal, ListEditorModal, SectionSettingsModal, TitleEditorModal } from "./TemplateEditors";
+import { AddAssessmentModal, AddBlockModal, EditBlockModal, GridEditorModal, ListEditorModal, SectionSettingsModal, TitleEditorModal, type BlockEdit } from "./TemplateEditors";
 import { confirmAction } from "./common";
 import { useApp } from "./state";
 
-const GOAL_AREA_LABEL: Record<GoalArea, string> = { writing: "Writing", cutting: "Cutting", selfcare: "Self care" };
 
 function useFlash(): [string | null, (m: string) => void] {
   const [flash, setFlash] = useState<string | null>(null);
@@ -115,8 +114,11 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
 
   useEffect(() => saveSetup(discipline, setup), [discipline, setup]);
   const sections = useMemo(() => packSections(pack, setup), [pack, setup]);
+  // Edit mode shows every paragraph, with the ones this setup leaves out marked, so each can still be edited.
+  const editSections = useMemo(() => packSections(pack, setup, { showHidden: true }), [pack, setup]);
   const grids = packGrids(pack);
   const listNames = Object.keys(pack.lists);
+  const assessmentOptions = pack.assessments.map((a) => ({ id: a.id, label: a.label }));
   const uses = useMemo(() => packUses(pack), [pack]);
   const optional = useMemo(() => optionalBlocks(pack), [pack]);
 
@@ -186,15 +188,23 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
   };
   const setGrid = (gridId: string, grid: GridDef) => setAssessments(pack.assessments.map((a) => (a.grid?.id === gridId ? { ...a, grid } : a)));
 
-  const applyBlockEdit = (sectionId: string, blockId: string, o: { text?: string; label?: string; examples?: string[]; hidden?: boolean }) =>
+  const applyBlockEdit = (sectionId: string, blockId: string, o: BlockEdit) =>
     setPack(
       updateBlock(pack, sectionId, blockId, (b) => {
         if (o.hidden) return null;
         if (b.kind === "grid") return b;
-        const next = { ...b } as Block & { label?: string };
+        const next = { ...b } as Block & PackBlockExtras & { label?: string };
         if (o.text !== undefined) next.text = o.text;
         if (o.label !== undefined) next.label = o.label;
         if (o.examples !== undefined) next.examples = o.examples;
+        if (o.when !== undefined) {
+          if (o.when) next.when = o.when;
+          else delete next.when;
+        }
+        if (o.optional !== undefined) {
+          if (o.optional) next.optional = true;
+          else delete next.optional;
+        }
         return next;
       }),
     );
@@ -226,20 +236,13 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
   const editTarget = (() => {
     if (!editing) return null;
     const found = findSection(pack, editing.sectionId);
-    const built = sections.find((s) => s.id === editing.sectionId)?.blocks.find((b) => b.id === editing.blockId);
+    const built = editSections.find((s) => s.id === editing.sectionId)?.blocks.find((b) => b.id === editing.blockId);
     const rawId = built?.sourceId ?? editing.blockId;
     const block = found?.section.blocks.find((b) => b.id === rawId);
     if (!found || !block || block.kind === "grid") return null;
     return { section: found.section, block, built: built ?? block, rawId };
   })();
   const settingsTarget = sectionSettings && sectionSettings !== "new" ? findSection(pack, sectionSettings) : null;
-  const conditionText = (s: PackSection) => {
-    const parts: string[] = [];
-    if (s.when?.reportType) parts.push(s.when.reportType === "evaluation" ? "evaluation" : "annual review");
-    if (s.when?.concerns !== undefined) parts.push(s.when.concerns ? "with concerns" : "no concerns");
-    if (s.when?.grades) parts.push(`grades ${s.when.grades.join(", ")}`);
-    return parts.join(" · ");
-  };
 
   return (
     <div className="report">
@@ -344,7 +347,7 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
                         checked={setup.goalAreas.includes(g)}
                         onChange={(e) => patch({ goalAreas: e.target.checked ? [...setup.goalAreas, g] : setup.goalAreas.filter((x) => x !== g) })}
                       />{" "}
-                      {GOAL_AREA_LABEL[g]}
+                      {GOAL_AREAS.find((x) => x.id === g)?.label ?? g}
                     </label>
                   ))}
                 </span>
@@ -363,6 +366,7 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
       <ReportOutput
         title={pack.titles[setup.reportType]}
         sections={sections}
+        previewSections={editMode ? editSections : undefined}
         reportType={setup.reportType}
         grade={setup.grade}
         pronoun={setup.pronoun}
@@ -382,10 +386,11 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
           resetAll: () => {},
           banner: (
             <>
-              This template is yours: click ✎ beside a paragraph to change its wording, blanks or sample sentences, or to delete it; beside a title
-              for the section's name, place and when it appears; beside a line written from ratings to change that assessment's items, levels and
-              sentences. Use the buttons under each section to add paragraphs, and at the end to add sections. Everything is saved in this browser and
-              included in Settings → Backup.
+              This template is yours: click ✎ beside a paragraph to change its wording, blanks, sample sentences or when it appears, or to delete it;
+              beside a title for the section's name, place and when it appears; beside a line written from ratings to change that assessment's items,
+              levels and sentences. Paragraphs this report leaves out (an unticked tick box, or a condition such as “sensory not ticked”) are shown
+              greyed with the reason, so you can still edit them. Use the buttons under each section to add paragraphs, and at the end to add sections.
+              Everything is saved in this browser, in Settings → Backup, and in your account if you sign in.
             </>
           ),
           onEditBlock: (sectionId, blockId) => setEditing({ sectionId, blockId }),
@@ -397,7 +402,7 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
             if (!found) return null;
             const list = found.assessment ? found.assessment.sections : pack.sections.filter((x) => (x.place ?? "after") === (found.section.place ?? "after"));
             const i = list.findIndex((x) => x.id === s.id);
-            const cond = conditionText(found.section);
+            const cond = describeCondition(found.section.when, pack);
             return (
               <span className="hint hidden-note section-tools">
                 {" "}
@@ -428,6 +433,10 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
           sectionExamples={editTarget.section.examples}
           listNames={listNames}
           hideLabel="Delete this paragraph"
+          when={editTarget.block.when}
+          optional={!!editTarget.block.optional}
+          inAssessment={!!findSection(pack, editing.sectionId)?.assessment}
+          assessments={assessmentOptions}
           onSave={(o) => applyBlockEdit(editing.sectionId, editTarget.rawId, o)}
           onSaveSectionExamples={(ex) => setPack(updateSection(pack, editing.sectionId, (s) => ({ ...s, examples: ex })))}
           onReset={() => {}}
@@ -445,6 +454,7 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
       {sectionSettings === "new" && (
         <SectionSettingsModal
           inAssessment={false}
+          assessments={assessmentOptions}
           onSave={(s) => setPack({ ...pack, sections: [...pack.sections, { id: newPackId(pack, "section"), title: s.title, place: s.place, ...(s.when ? { when: s.when } : {}), ...(s.notesHint ? { notesHint: s.notesHint } : {}), blocks: [], examples: [] }] })}
           onClose={() => setSectionSettings(null)}
         />
@@ -453,6 +463,7 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
         <SectionSettingsModal
           initial={{ title: settingsTarget.section.title, place: settingsTarget.section.place ?? "after", when: settingsTarget.section.when, notesHint: settingsTarget.section.notesHint ?? "" }}
           inAssessment={!!settingsTarget.assessment}
+          assessments={assessmentOptions}
           onSave={(s) =>
             setPack(
               updateSection(pack, sectionSettings, (sec) => {

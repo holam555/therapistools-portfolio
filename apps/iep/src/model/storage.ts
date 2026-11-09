@@ -1,20 +1,25 @@
 import type { Backup, Library, Recipe, Sentence } from "./types";
-import { emptyBuilderState, type BuilderState } from "./assemble";
 import { newId } from "./ids";
 import { libraryFor } from "./defaults";
 import { isDisciplineId, type DisciplineId } from "./disciplines";
 
+/**
+ * Storage keys. The sentence library and recipes belong to the retired
+ * Library, Import, Builder and Output tabs (2026-11-09): nothing shows them
+ * any more, but they are still loaded and saved so an older backup file keeps
+ * working and nothing a writer stored is thrown away. The library's wording
+ * also feeds the privacy check's allow-list. A retired "easyiep.draft" key may
+ * remain in a browser from before; it is left alone.
+ */
 export const KEYS = {
   library: "easyiep.library",
   recipes: "easyiep.recipes",
-  draft: "easyiep.draft",
   discipline: "easyiep.discipline",
 } as const;
 
 /**
- * Each discipline keeps its own library, recipes and draft. Occupational
- * therapy uses the original keys, so libraries saved before disciplines
- * existed keep loading as the OT library.
+ * Each discipline keeps its own data. Occupational therapy uses the original
+ * keys, so data saved before disciplines existed keeps loading as OT.
  */
 export function keyFor(base: string, discipline: DisciplineId): string {
   return discipline === "ot" ? base : `${base}.${discipline}`;
@@ -76,29 +81,6 @@ export function loadRecipes(discipline: DisciplineId = "ot"): Recipe[] {
 
 export function saveRecipes(recipes: Recipe[], discipline: DisciplineId = "ot"): void {
   storage()?.setItem(keyFor(KEYS.recipes, discipline), JSON.stringify(recipes));
-}
-
-export function loadDraft(discipline: DisciplineId = "ot"): BuilderState {
-  const raw = storage()?.getItem(keyFor(KEYS.draft, discipline));
-  if (!raw) return emptyBuilderState();
-  try {
-    const p = JSON.parse(raw) as Partial<BuilderState>;
-    const arr = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
-    return {
-      pronounSet: p.pronounSet === "she" ? "she" : "he",
-      gradeBandId: typeof p.gradeBandId === "string" ? p.gradeBandId : null,
-      domainIds: arr(p.domainIds),
-      taskIds: arr(p.taskIds),
-      sentenceIds: arr(p.sentenceIds),
-      values: p.values && typeof p.values === "object" ? (p.values as BuilderState["values"]) : {},
-    };
-  } catch {
-    return emptyBuilderState();
-  }
-}
-
-export function saveDraft(d: BuilderState, discipline: DisciplineId = "ot"): void {
-  storage()?.setItem(keyFor(KEYS.draft, discipline), JSON.stringify(d));
 }
 
 // ---------- backup file ----------
