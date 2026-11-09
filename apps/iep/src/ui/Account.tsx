@@ -26,11 +26,11 @@ export function SyncStatus({ sync, long = false }: { sync: SyncState; long?: boo
     case "syncing":
       return <span className="hint">Checking your account…</span>;
     case "matched":
-      return <span className="hint">Your account holds the same template as this browser (checked {timeOf(sync.at)}).</span>;
+      return <span className="hint">✓ Template in your account matches this browser · {timeOf(sync.at)}</span>;
     case "saved":
       return (
         <span className="sync-status">
-          <span className="hint">Template saved to your account {timeOf(sync.at)}</span>
+          <span className="hint">✓ Template saved to your account · {timeOf(sync.at)}</span>
           {long && sync.names.length > 0 && (
             <span className="hint warn">
               Capitalised words the privacy check does not know: {sync.names.slice(0, 8).map((w) => w.text).join(", ")}
@@ -115,8 +115,8 @@ function SignedInPanel() {
       <p>
         Signed in as <strong>{user.email ?? "a writer"}</strong> with {user.provider === "google" ? "Google" : "an email code"}.
       </p>
-      <WhatIsStored />
       <SyncStatus sync={sync} long />
+      <WhatIsStored />
       <div className="row gap wrap modal-actions">
         <button type="button" className="btn btn-sm" onClick={() => void syncNow()} disabled={sync.kind === "syncing"}>
           Check again
@@ -125,24 +125,33 @@ function SignedInPanel() {
           Sign out
         </button>
       </div>
-      <p className="hint">Signing out keeps the template in this browser. It stays in your account too, for the next device you sign in on.</p>
+      <p className="hint">Signing out keeps the template here and in your account.</p>
     </div>
   );
 }
 
+/** What the account does and does not hold, in two lines. */
 export function WhatIsStored() {
   return (
-    <div className="account-stored">
-      <p className="hint">
-        <strong>Kept in your account:</strong> your report template (wording, labels, sample sentences, dropdown choices, rating grids, which
-        paragraphs are hidden), so it follows you to another browser or computer.
-      </p>
-      <p className="hint">
-        <strong>Never in your account:</strong> the report you are writing, the blanks you filled and your ratings. Those stay in this browser only. The privacy check runs before every save and holds the template back if it finds a date, phone number
-        or email address.
-      </p>
-    </div>
+    <ul className="account-stored">
+      <li>
+        <strong>In your account:</strong> your report template.
+      </li>
+      <li>
+        <strong>Only in this browser:</strong> the reports you write, filled blanks and ratings.
+      </li>
+    </ul>
   );
+}
+
+const WELCOME_KEY = "easyiep.welcome.seen";
+
+export function welcomeSeen(): boolean {
+  try {
+    return localStorage.getItem(WELCOME_KEY) === "1";
+  } catch {
+    return true;
+  }
 }
 
 function SignInForm({ onDone }: { onDone: () => void }) {
@@ -186,7 +195,7 @@ function SignInForm({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="account-panel">
-      <p className="hint">An account keeps your report template so you can open it on another computer. Nothing else is stored.</p>
+      <p className="hint">An account keeps your report template so you can open it on another computer.</p>
       <button type="button" className="btn btn-primary google-btn" disabled={busy} onClick={() => void run(signInWithGoogle)}>
         Continue with Google
       </button>
@@ -228,22 +237,14 @@ function SignInForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-const WELCOME_KEY = "easyiep.welcome.seen";
-
 /**
  * First visit in this browser, when accounts are on and nobody is signed in:
  * sign in to use your own template, or try the built-in sample first. Shown
- * once; the flag holds nothing but "seen".
+ * once; the flag holds nothing but "seen". `onSeen` fires when it goes away.
  */
-export function WelcomeNotice() {
+export function WelcomeNotice({ onSeen }: { onSeen?: () => void }) {
   const { enabled, ready, user } = useAccount();
-  const [seen, setSeen] = useState(() => {
-    try {
-      return localStorage.getItem(WELCOME_KEY) === "1";
-    } catch {
-      return true;
-    }
-  });
+  const [seen, setSeen] = useState(welcomeSeen);
   const [signIn, setSignIn] = useState(false);
   const dismiss = () => {
     try {
@@ -252,6 +253,7 @@ export function WelcomeNotice() {
       /* storage unavailable */
     }
     setSeen(true);
+    onSeen?.();
   };
   useEffect(() => {
     if (user && !seen) dismiss();
@@ -274,22 +276,17 @@ export function WelcomeNotice() {
           </button>
         </div>
         <div className="account-panel">
-          <p>
-            <strong>Sign in</strong> to use your own report template. It is kept in your account and follows you to any computer.
-          </p>
-          <p>
-            Or <strong>try it first</strong> with the built-in sample template: generic wording with fictional examples, which you can edit
-            as you go. You can sign in later from the button at the top.
-          </p>
-          <p className="hint">Either way, the reports you write and the blanks you fill never leave this browser.</p>
-          <div className="row gap wrap modal-actions">
-            <button type="button" className="btn btn-primary" onClick={() => (dismiss(), setSignIn(true))}>
-              Sign in
+          <div className="start-choices">
+            <button type="button" className="start-choice start-choice-primary" onClick={() => (dismiss(), setSignIn(true))}>
+              <strong>Sign in</strong>
+              <span className="hint">Opens the template saved in your account, on any computer.</span>
             </button>
-            <button type="button" className="btn" onClick={dismiss}>
-              Try it with the sample template
+            <button type="button" className="start-choice" onClick={dismiss}>
+              <strong>Try the sample template</strong>
+              <span className="hint">Generic wording you can edit. Sign in any time from the top bar.</span>
             </button>
           </div>
+          <p className="hint">The reports you write never leave this browser.</p>
         </div>
       </div>
     </div>
@@ -334,7 +331,7 @@ export function AccountCard() {
           <SyncStatus sync={sync} long />
         </>
       ) : (
-        <p className="hint">Sign in to keep your report template in an account and open it on another computer. Without an account everything stays in this browser, as before.</p>
+        <p className="hint">Sign in to keep your report template in an account and open it on another computer.</p>
       )}
       <WhatIsStored />
       <div className="row gap wrap">

@@ -169,6 +169,17 @@ to Vercel, so there are no old addresses to redirect.
      message to the owner). Still open: the AD 12 daily living checklist's
      exact form order; the owner has the form, the code only has a report
      written from it.
+   - Done 2026-11-09 (second round): shorter welcome and account dialogs
+     (two choice buttons, two-line "in your account / only here"); a
+     first-visit guided tour of the Report tab (`ui/Tour.tsx`, replay via
+     "Show me around" in the header; flag `easyiep.tour.done`); "Change
+     template…" on the Report tab goes back to the start choices with a
+     warning and a backup button (deleting the local template also deletes
+     the account copy, by design of the sync); imported templates get a
+     notes hint from the blanks' labels so every section with blanks has a
+     prompt; long instruction paragraphs became short lists. The owner
+     wants the same tour for the scheduler and worksheets once they have
+     checked this one.
 2. **9–12 fine motor screen,** when the owner sends one.
 3. **Open questions to raise with the owner:** whether the dropdown choices
    (minutes, disability categories, grasp types) fit their district. The

@@ -11,6 +11,9 @@ import { readyMadeAssessments } from "../report/premade/assessments";
 import { loadSetup, loadValues, saveSetup, saveValues } from "../report/setup";
 import { GOAL_AREAS, GRADE_GROUPS, TEACHER_AREAS, type Block, type ReportSetup, type ReportValues } from "../report/types";
 import { ImportDocument } from "./ImportDocument";
+import { useAccount } from "../account/AccountProvider";
+import { exportBackup } from "./backup";
+import { Modal } from "./common";
 import { RatingPanel, ReportOutput } from "./ReportOutput";
 import { AddAssessmentModal, AddBlockModal, EditBlockModal, GridEditorModal, ListEditorModal, SectionSettingsModal, TitleEditorModal, type BlockEdit } from "./TemplateEditors";
 import { confirmAction } from "./common";
@@ -75,22 +78,19 @@ function PackStart({ label, premade, onChoose }: { label: string; premade: () =>
   return (
     <section className="card report-empty">
       <h2>Start a report template for {label.toLowerCase()}</h2>
-      <p className="hint">
-        A template is the report with its fixed wording written in and yellow blanks where each student differs. It is saved only in this browser, and in
-        Settings → Backup. You can change every word of it later.
-      </p>
+      <p className="hint">A template is your report with the fixed wording written in and yellow blanks where each student differs. You can change every word later.</p>
       <div className="start-choices">
+        <button type="button" className="start-choice start-choice-primary" onClick={() => onChoose(premade())}>
+          <strong>Use the pre-made {label.toLowerCase()} template</strong>
+          <span className="hint">A full sample report with fictional examples. The quickest start.</span>
+        </button>
         <button type="button" className="start-choice" onClick={() => setImporting(true)}>
           <strong>Build from my own document</strong>
-          <span className="hint">Upload your district's report template or one of your own finished reports as a Word file, or paste its text, and get a draft template to correct.</span>
+          <span className="hint">A Word file or pasted text of your district form or a finished report.</span>
         </button>
         <button type="button" className="start-choice" onClick={() => onChoose(blankPack(label))}>
           <strong>Start blank</strong>
-          <span className="hint">One summary section to begin with. Add your own sections and assessments.</span>
-        </button>
-        <button type="button" className="start-choice" onClick={() => onChoose(premade())}>
-          <strong>Pre-made {label.toLowerCase()} template</strong>
-          <span className="hint">A generic sample report for {label.toLowerCase()}: assessments, checklists, summary, next steps, services and a goal, with plain wording and fictional examples. Change any of it.</span>
+          <span className="hint">One summary section. Add your own.</span>
         </button>
       </div>
     </section>
@@ -98,8 +98,10 @@ function PackStart({ label, premade, onChoose }: { label: string; premade: () =>
 }
 
 function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack: (p: TemplatePack) => void; onDiscard: () => void }) {
-  const { discipline } = useApp();
+  const { discipline, lib, recipes } = useApp();
+  const { user } = useAccount();
   const current = getDiscipline(discipline);
+  const [changing, setChanging] = useState(false);
   const [setup, setSetup] = useState<ReportSetup>(() => loadSetup(discipline));
   const { values, setValues, setValue, filledCount } = useValues(discipline);
   const [editMode, setEditMode] = useState(false);
@@ -227,10 +229,9 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
     }
   };
   const discard = () => {
-    if (confirmAction("Delete this whole template and go back to the start choices? Filled blanks are cleared too.")) {
-      setValues({});
-      onDiscard();
-    }
+    setValues({});
+    setChanging(false);
+    onDiscard();
   };
 
   const editTarget = (() => {
@@ -247,12 +248,19 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
   return (
     <div className="report">
       <section className="card report-setup" aria-label="Report setup">
-        <h2>1. Set up the report</h2>
-        <SetupBasics setup={setup} patch={patch} onGrade={onGrade} />
+        <div className="row gap between wrap">
+          <h2>1. Set up the report</h2>
+          <button type="button" className="link setup-change" onClick={() => setChanging(true)}>
+            Change template…
+          </button>
+        </div>
+        <div data-tour="setup">
+          <SetupBasics setup={setup} patch={patch} onGrade={onGrade} />
+        </div>
 
         <h3>What did you do?</h3>
         {pack.assessments.length === 0 && <p className="hint">No assessments yet.{editMode ? "" : " Turn on Edit template to add some."}</p>}
-        <ul className="assess-list">
+        <ul className="assess-list" data-tour="assessments">
           {pack.assessments.map((a, i) => (
             <li key={a.id}>
               <span className="screen-item-row">
@@ -358,10 +366,33 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
         {editMode && (
           <p className="row gap wrap">
             <button type="button" className="btn btn-sm" onClick={() => setAddingAssessment(true)}>+ Add an assessment</button>
-            <button type="button" className="btn btn-sm btn-ghost" onClick={discard}>Delete this template…</button>
           </p>
         )}
       </section>
+
+      {changing && (
+        <Modal title="Change template" onClose={() => setChanging(false)}>
+          <p>Go back to the start choices: the pre-made template, your own document, or blank.</p>
+          <ul className="hint-list">
+            <li>The template you have now is deleted from this browser{user ? " and from your account" : ""}.</li>
+            <li>Filled blanks and ratings are cleared.</li>
+            <li>A backup file brings it back later: Settings → Backup → Restore.</li>
+          </ul>
+          <div className="row gap between wrap modal-actions">
+            <button type="button" className="btn btn-sm" onClick={() => exportBackup(discipline, lib, recipes)}>
+              Export a backup first
+            </button>
+            <span className="row gap">
+              <button type="button" className="btn" onClick={() => setChanging(false)}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-danger" onClick={discard}>
+                Delete and choose again
+              </button>
+            </span>
+          </div>
+        </Modal>
+      )}
 
       <ReportOutput
         title={pack.titles[setup.reportType]}
@@ -385,13 +416,13 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
           hasEdits: false,
           resetAll: () => {},
           banner: (
-            <>
-              This template is yours: click ✎ beside a paragraph to change its wording, blanks, sample sentences or when it appears, or to delete it;
-              beside a title for the section's name, place and when it appears; beside a line written from ratings to change that assessment's items,
-              levels and sentences. Paragraphs this report leaves out (an unticked tick box, or a condition such as “sensory not ticked”) are shown
-              greyed with the reason, so you can still edit them. Use the buttons under each section to add paragraphs, and at the end to add sections.
-              Everything is saved in this browser, in Settings → Backup, and in your account if you sign in.
-            </>
+            <ul className="hint-list">
+              <li>✎ beside a paragraph: its wording, blanks, sample sentences, when it appears, or delete it.</li>
+              <li>✎ beside a title: the section's name, place and when it appears.</li>
+              <li>✎ beside a line written from ratings: that assessment's items, levels and sentences.</li>
+              <li>Greyed paragraphs are ones this report leaves out. You can still edit them.</li>
+              <li>“+ paragraph” under a section and “+ Add a section” at the end add more.</li>
+            </ul>
           ),
           onEditBlock: (sectionId, blockId) => setEditing({ sectionId, blockId }),
           onEditTitle: setSectionSettings,

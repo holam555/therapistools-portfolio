@@ -431,14 +431,33 @@ function makeGrid(id: string, levels: GridLevel[], groups: GridGroup[]): GridDef
 export function packFromDraft(draft: Draft, disciplineLabel: string): TemplatePack {
   const assessments: PackAssessment[] = [];
   const sections: PackSection[] = [];
-  const toSection = (s: DraftSection, place?: "before" | "after"): PackSection => ({
-    id: s.id,
-    title: s.title,
-    blocks: s.blocks,
-    examples: s.examples,
-    ...(s.notesHint ? { notesHint: s.notesHint } : {}),
-    ...(place ? { place } : {}),
-  });
+  // A section with blanks gets an AI prompt. The prompt asks for notes; when the
+  // document gave no instruction to quote, the blanks' own labels say what to paste.
+  const hintFor = (s: DraftSection): string | undefined => {
+    if (s.notesHint) return s.notesHint;
+    const labels: string[] = [];
+    for (const b of s.blocks) {
+      if (b.kind === "grid") continue;
+      for (const m of b.text.matchAll(/\[\[(.+?)\]\]/g)) {
+        const label = m[1].split("::")[0].trim();
+        if (label && !labels.includes(label)) labels.push(label);
+      }
+    }
+    if (!labels.length) return undefined;
+    const shown = labels.slice(0, 4).join(", ");
+    return labels.length > 4 ? `${shown}, and the rest of the blanks` : shown;
+  };
+  const toSection = (s: DraftSection, place?: "before" | "after"): PackSection => {
+    const notesHint = hintFor(s);
+    return {
+      id: s.id,
+      title: s.title,
+      blocks: s.blocks,
+      examples: s.examples,
+      ...(notesHint ? { notesHint } : {}),
+      ...(place ? { place } : {}),
+    };
+  };
   for (const s of draft.sections) {
     if (s.role === "out") continue;
     if (s.role === "assessment") assessments.push({ id: `a-${s.id}`, label: s.title, sections: [toSection(s)], ...(s.grid ? { grid: s.grid } : {}) });

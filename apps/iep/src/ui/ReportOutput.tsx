@@ -112,21 +112,24 @@ export function ReportOutput({
         <div className="row gap between wrap">
           <h2>2. Fill the blanks, download Word</h2>
           <span className="row gap">
-            <button type="button" className={`btn btn-sm ${editMode ? "btn-accent" : ""}`} aria-pressed={editMode} onClick={() => setEditMode(!editMode)}>
+            <button type="button" className={`btn btn-sm ${editMode ? "btn-accent" : ""}`} aria-pressed={editMode} onClick={() => setEditMode(!editMode)} data-tour="edit">
               {editMode ? "Done editing" : "Edit template"}
             </button>
             <button type="button" className="btn btn-sm btn-ghost" onClick={clearFilled} disabled={!filledCount && !anyRatings}>
               Clear filled blanks
             </button>
-            <button type="button" className="btn btn-primary" onClick={download} disabled={busy || sections.length === 0}>
+            <button type="button" className="btn btn-primary" onClick={download} disabled={busy || sections.length === 0} data-tour="download">
               {busy ? "Building…" : "Download Word draft"}
             </button>
           </span>
         </div>
-        <p className="hint">
-          Click any <mark className="blank">yellow blank</mark> to pick from a list or from sentences in your own examples, or type your own. Filled
-          blanks go into Word as plain text; the rest stay yellow. [STUDENT] appears once at the start of each section for you to replace with the name.
-        </p>
+        <ul className="hint-list">
+          <li>
+            Click a <mark className="blank">yellow blank</mark> to pick from your examples, or type your own.
+          </li>
+          <li>Blanks you fill go into Word as text. The rest stay yellow.</li>
+          <li>[STUDENT] starts each section. Type the name over it in Word.</li>
+        </ul>
         {flash && <div className="notice notice-ok" role="status">{flash}</div>}
         {editMode && (
           <div className="notice notice-info edit-banner">
@@ -136,7 +139,7 @@ export function ReportOutput({
             )}
           </div>
         )}
-        <div className={`doc-preview ${editMode ? "editing" : ""}`} aria-label="Preview">
+        <div className={`doc-preview ${editMode ? "editing" : ""}`} aria-label="Preview" data-tour="preview">
           <h3 className="doc-title">{title}</h3>
           {shown.length === 0 && <p className="hint">Nothing to show yet: turn on Edit template and add a section or an assessment.</p>}
           {shown.map((s) => (
@@ -164,12 +167,14 @@ export function ReportOutput({
         </div>
       </section>
 
-      <section className="card">
+      <section className="card" data-tour="prompts">
         <h2>3. AI prompts, one section at a time</h2>
-        <p className="hint">
-          Copy one prompt, paste it into Gemini, then paste your rough notes for that section where it says so. Each prompt carries the section as you
-          have filled it so far, plus examples from your own reports so the result matches your style. Paste the answer into your Word draft.
-        </p>
+        <ol className="hint-list">
+          <li>Copy a section's prompt and paste it into Gemini.</li>
+          <li>Paste your rough notes where the prompt says so.</li>
+          <li>Paste the answer into your Word draft.</li>
+        </ol>
+        <p className="hint">Each prompt carries the section as you filled it, with your sample sentences so the result matches your style. Nothing is sent from here.</p>
         {promptSections.length === 0 && <p className="hint">Every blank is filled, so nothing needs a prompt.</p>}
         <ul className="prompt-list">
           {promptSections.map((s) => (

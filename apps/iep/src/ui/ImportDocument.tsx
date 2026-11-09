@@ -59,11 +59,13 @@ export function ImportDocument({ disciplineLabel, onDone, onCancel }: { discipli
     return (
       <section className="card report-empty">
         <h2>Build a template from your own document</h2>
-        <p className="hint">
-          Upload your district's report template or one of your own finished reports as a Word file, or paste its text. Headings become sections,
-          rating tables become checklists, highlighted or bracketed text becomes blanks, and instructions become hints. Names, dates of birth,
-          addresses and other identifying lines are left out. It all happens in this browser; the file is not sent anywhere.
-        </p>
+        <p className="hint">Upload a Word file or paste the text of your district form or one of your finished reports.</p>
+        <ul className="hint-list">
+          <li>Headings become sections. Rating tables become checklists.</li>
+          <li>Highlighted or bracketed text becomes blanks. Instructions become hints.</li>
+          <li>Names, dates of birth and other identifying lines are left out.</li>
+          <li>Nothing leaves this browser.</li>
+        </ul>
         <div className="import-source">
           <label className="field">
             <span className="field-label">Word file (.docx)</span>
@@ -160,9 +162,12 @@ function ReviewDraft({
     <section className="card report-empty">
       <h2>Check what was found</h2>
       <p className="hint">
-        {counts.sections} sections, {counts.assessments} assessments, {counts.grids} rating tables and {counts.blanks} blanks. Choose what each section
-        is, rename or leave out what's wrong, then use the template. Everything else can be fixed later in Edit template.
+        {counts.sections} sections, {counts.assessments} assessments, {counts.grids} rating tables and {counts.blanks} blanks.
       </p>
+      <ul className="hint-list">
+        <li>Say what each section is, rename it, or leave it out.</li>
+        <li>Then use the template. Everything else can be fixed later in Edit template.</li>
+      </ul>
       {leftOut.length > 0 && (
         <p className="hint">
           <strong>Left out on purpose:</strong> {leftOut.join(", ")}. The tool never holds a student's details; fill those in Word.

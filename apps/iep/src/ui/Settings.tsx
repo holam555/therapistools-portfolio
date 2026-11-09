@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
 import { setNeverAllow } from "../model/library";
 import { DISCIPLINES, getDiscipline, type DisciplineId } from "../model/disciplines";
-import { makeBackup, parseBackup, serializeBackup } from "../model/storage";
+import { parseBackup } from "../model/storage";
 import { loadPack, normalizePack, savePack } from "../report/pack";
 import { defaultSetup, saveSetup, saveValues } from "../report/setup";
-import { confirmAction, downloadText, todayStamp } from "./common";
+import { exportBackup } from "./backup";
+import { confirmAction } from "./common";
 import { useApp } from "./state";
 import { AccountCard } from "./Account";
 import { PRIVACY_PATH, SITE_ORIGIN } from "../../../../shared/brand.js";
@@ -27,9 +28,8 @@ export function Settings() {
   const hasPack = !!loadPack(discipline);
 
   const exportJson = () => {
-    const pack = loadPack(discipline);
-    downloadText(`therapistools-iep-${discipline}-backup-${todayStamp()}.json`, serializeBackup(makeBackup(lib, recipes, discipline, pack ?? undefined)));
-    setMessage(pack ? "Backup file saved to your Downloads folder." : "Backup file saved to your Downloads folder. There is no report template for this discipline yet, so the file holds only older data.");
+    const hadPack = exportBackup(discipline, lib, recipes);
+    setMessage(hadPack ? "Backup file saved to your Downloads folder." : "Backup file saved to your Downloads folder. There is no report template for this discipline yet, so the file holds only older data.");
   };
 
   const onFile = async (file: File | undefined) => {

@@ -151,3 +151,17 @@ describe("drafting a template from a form", () => {
     expect(toTemplateText("Scores: ______ and (insert date) and (Describe the setting)")).toBe("Scores: [[fill in]] and [[insert date]] and [[describe the setting]]");
   });
 });
+
+describe("prompts for an imported template", () => {
+  it("gives every section with blanks a notes hint, from the document's instruction or from the blanks' labels", () => {
+    const draft = draftFromItems(
+      itemsFromText(["FINE MOTOR", "XX copied shapes with [[accuracy]] and used a [[grasp type::grasp]] grasp in [[time]].", "SUMMARY", "(Summarise the findings here)", "XX [[overall impression]].", "CLOSING", "Thank you for reading this report."].join("\n")),
+      {},
+    );
+    const pack = packFromDraft(draft, "Occupational therapy");
+    const by = (title: string) => [...pack.sections, ...pack.assessments.flatMap((a) => a.sections)].find((s) => s.title === title)!;
+    expect(by("Fine Motor").notesHint).toBe("accuracy, grasp type, time");
+    expect(by("Summary").notesHint).toBe("Summarise the findings here");
+    expect(by("Closing").notesHint).toBeUndefined();
+  });
+});

@@ -41,6 +41,12 @@ the sample sentences and offers what they put in that very spot ("82",
 "left-handed", "too hard"), then sentences that share words with the blank,
 with every sentence one click away.
 
+The AI prompts are written by the app from each section's own wording and
+blanks; no AI is called. A template built from your own document gets a
+prompt for every section that has blanks: the document's own instructions
+("Describe the setting") become the notes hint, and otherwise the blanks'
+labels do.
+
 ## Disciplines
 
 On first use you pick a discipline: occupational therapy, speech-language
@@ -65,7 +71,11 @@ automatically, and in your account if you sign in.
 
 - **Report** — set up the report, tick what you did, rate checklists, fill
   the blanks, download the Word draft, copy one AI prompt per section, and
-  edit the template.
+  edit the template. "Change template…" goes back to the start choices
+  (it deletes the current template, here and in the account, after a
+  warning and an offer to export a backup). A short guided tour runs the
+  first time a template is on screen; "Show me around" in the header
+  replays it (`src/ui/Tour.tsx`, anchored on `data-tour` attributes).
 - **Settings** — privacy, the optional account, the discipline, backup and
   restore of the template, the never-allow list for the privacy check, and
   start over. The **privacy check** warns when text typed into a blank or the

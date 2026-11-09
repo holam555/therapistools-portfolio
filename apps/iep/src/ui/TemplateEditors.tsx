@@ -668,13 +668,18 @@ export function AddAssessmentModal({
           <option value="byLevel">A set of scales: each scale gets a result, written up one line per result</option>
         </select>
       </label>
-      <p className="hint">
-        A rating table has <strong>items</strong> (the things you rate: tasks, skills, subtests, scales) and <strong>levels</strong> (what each item
-        can get: 1–5, independent or needs help, typical or concern). A <strong>checklist</strong> bunches items into groups and writes a paragraph per
-        group, such as “Independent with coat and shoes. Needs help with buttons.” A <strong>set of scales</strong> writes one line per result,
-        such as “Concern: vision, touch.” You get one section with an opening paragraph to edit; add items, levels and more paragraphs from the
-        preview.
-      </p>
+      <ul className="hint-list">
+        <li>
+          A rating table has <strong>items</strong> (tasks, skills, subtests, scales) and <strong>levels</strong> (1–5, independent or needs help, typical or concern).
+        </li>
+        <li>
+          A <strong>checklist</strong> writes a paragraph per group of items: “Independent with coat and shoes. Needs help with buttons.”
+        </li>
+        <li>
+          A <strong>set of scales</strong> writes one line per result: “Concern: vision, touch.”
+        </li>
+        <li>You get one section with an opening paragraph. Add items, levels and paragraphs from the preview.</li>
+      </ul>
       <PrivacyNote texts={[label]} />
       <div className="row gap end modal-actions">
         <button type="button" className="btn" onClick={onClose}>
