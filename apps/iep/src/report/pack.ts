@@ -4,7 +4,7 @@ import { announceTemplateChange } from "../account/events";
 import { gridSummaryPhrase, groupSentences, levelLine, normalizeGrid, type GridDef, type GridRatings } from "./grids";
 import { OPTION_LISTS, type OptionList } from "./options";
 import { fillPattern } from "./render";
-import { GOAL_AREAS, GRADE_GROUPS, TEACHER_AREAS, type Block, type GoalArea, type GradeGroup, type ReportSection, type ReportSetup, type ReportType, type ServiceType, type TeacherArea, type TeacherAreas } from "./types";
+import { CONCERN_AREAS, GOAL_AREAS, GRADE_GROUPS, TEACHER_AREAS, type Block, type ConcernArea, type ConcernIn, type GoalArea, type GradeGroup, type ReportSection, type ReportSetup, type ReportType, type ServiceType, type TeacherArea, type TeacherAreas } from "./types";
 
 /**
  * A template pack: one discipline's report template as plain data, built and
@@ -18,6 +18,8 @@ import { GOAL_AREAS, GRADE_GROUPS, TEACHER_AREAS, type Block, type GoalArea, typ
 export interface PackCondition {
   reportType?: ReportType;
   concerns?: boolean;
+  /** Areas a concern was found in (true) or not (false): motor, sensory. With no concerns at all, every area counts as not. */
+  concernIn?: Partial<ConcernIn>;
   grades?: GradeGroup[];
   /** Direct or indirect services, as chosen in setup. */
   serviceType?: ServiceType;
@@ -84,6 +86,7 @@ export function conditionHolds(when: PackCondition | undefined, setup: ReportSet
   if (!when) return true;
   if (when.reportType !== undefined && when.reportType !== setup.reportType) return false;
   if (when.concerns !== undefined && when.concerns !== setup.concerns) return false;
+  if (when.concernIn) for (const [k, v] of Object.entries(when.concernIn)) if ((setup.concerns && setup.concernIn[k as ConcernArea]) !== v) return false;
   if (when.grades && !when.grades.includes(setup.grade)) return false;
   if (when.serviceType !== undefined && when.serviceType !== setup.serviceType) return false;
   if (when.teacherAreas) for (const [k, v] of Object.entries(when.teacherAreas)) if (setup.teacherAreas[k as TeacherArea] !== v) return false;
@@ -99,6 +102,11 @@ export function describeCondition(when: PackCondition | undefined, pack?: Pick<T
   const parts: string[] = [];
   if (when.reportType) parts.push(when.reportType === "evaluation" ? "evaluation only" : "annual review only");
   if (when.concerns !== undefined) parts.push(when.concerns ? "concerns found / qualifies" : "no concerns / does not qualify");
+  if (when.concernIn)
+    for (const [k, v] of Object.entries(when.concernIn)) {
+      const label = (CONCERN_AREAS.find((a) => a.id === k)?.label ?? k).toLowerCase();
+      parts.push(v ? `${label} concern` : `no ${label} concern`);
+    }
   if (when.grades) parts.push(`grades ${when.grades.map((g) => GRADE_GROUPS.find((x) => x.id === g)?.label ?? g).join(", ")}`);
   if (when.serviceType) parts.push(`${when.serviceType} services`);
   if (when.teacherAreas)
@@ -130,15 +138,17 @@ export function optionalBlocks(pack: TemplatePack): { assessment: PackAssessment
 }
 
 /** Which setup choices this pack reacts to, so the builder shows only the controls that matter. */
-export function packUses(pack: TemplatePack): { teacherAreas: Set<string>; serviceType: boolean; objectives: boolean; goalAreas: GoalArea[] } {
+export function packUses(pack: TemplatePack): { teacherAreas: Set<string>; serviceType: boolean; objectives: boolean; goalAreas: GoalArea[]; concernIn: boolean } {
   const teacherAreas = new Set<string>();
   let serviceType = false;
+  let concernIn = false;
   let objectives = false;
   const goalAreas: GoalArea[] = [];
   const note = (when: PackCondition | undefined, assessmentId?: string) => {
     if (!when) return;
     if ((when.teacherAreas || when.anyTeacherArea !== undefined) && assessmentId) teacherAreas.add(assessmentId);
     if (when.serviceType !== undefined) serviceType = true;
+    if (when.concernIn) concernIn = true;
     if (when.goalArea !== undefined && !goalAreas.includes(when.goalArea)) goalAreas.push(when.goalArea);
   };
   const walk = (sections: PackSection[], assessmentId?: string) => {
@@ -153,7 +163,7 @@ export function packUses(pack: TemplatePack): { teacherAreas: Set<string>; servi
   };
   for (const a of pack.assessments) walk(a.sections, a.id);
   walk(pack.sections);
-  return { teacherAreas, serviceType, objectives, goalAreas };
+  return { teacherAreas, serviceType, objectives, goalAreas, concernIn };
 }
 
 /** Every rating grid in the pack, by id. */
@@ -272,6 +282,11 @@ function normalizeCondition(raw: unknown): PackCondition | undefined {
   const out: PackCondition = {};
   if (r.reportType === "evaluation" || r.reportType === "annual") out.reportType = r.reportType;
   if (typeof r.concerns === "boolean") out.concerns = r.concerns;
+  if (r.concernIn && typeof r.concernIn === "object") {
+    const areas: Partial<ConcernIn> = {};
+    for (const k of ["motor", "sensory"] as const) if (typeof r.concernIn[k] === "boolean") areas[k] = r.concernIn[k];
+    if (Object.keys(areas).length) out.concernIn = areas;
+  }
   if (Array.isArray(r.grades)) {
     const grades = r.grades.filter((g): g is GradeGroup => GRADE_GROUPS.some((x) => x.id === g));
     if (grades.length) out.grades = grades;

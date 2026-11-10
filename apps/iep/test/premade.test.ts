@@ -20,7 +20,9 @@ function allSetups(): ReportSetup[] {
   for (const g of GRADE_GROUPS)
     for (const reportType of ["evaluation", "annual"] as const)
       for (const concerns of [true, false])
-        for (const pronoun of ["he", "she"] as const) out.push({ ...defaultSetup(g.id), reportType, concerns, pronoun });
+        for (const pronoun of ["he", "she"] as const)
+          for (const motor of [true, false])
+            for (const sensory of [true, false]) out.push({ ...defaultSetup(g.id), reportType, concerns, pronoun, concernIn: { motor, sensory } });
   return out;
 }
 

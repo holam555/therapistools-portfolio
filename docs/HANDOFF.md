@@ -188,6 +188,18 @@ to Vercel, so there are no old addresses to redirect.
      Editor, keys `otsheet:tour:*:v1`). Steps whose target is not on the
      page are skipped, so an empty school or a template without blanks
      still gets a sensible tour.
+   - Done 2026-11-09 (fourth round): Sign in was pushed off the top bar on
+     a phone by "Show me around"; the bar wraps now and the page fits a
+     phone. The home page no longer advertises the offline download (the
+     file is still built). **Areas of concern:** with concerns found, setup
+     offers Motor and Sensory ticks (`setup.concernIn`, default both), and a
+     paragraph or section can be conditioned on either
+     (`when.concernIn`), so a report can say "no motor concerns" and
+     "sensory concerns" together. The control shows only for templates that
+     use the condition; the OT sample's Evaluation Summary does. The
+     owner's own template needs the condition set on its summary
+     paragraphs by hand (Edit template → ✎ → When it appears → More
+     conditions → Areas of concern).
 2. **9–12 fine motor screen,** when the owner sends one.
 3. **Open questions to raise with the owner:** whether the dropdown choices
    (minutes, disability categories, grasp types) fit their district. The

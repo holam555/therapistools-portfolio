@@ -8,6 +8,7 @@ export function defaultSetup(grade: GradeGroup = "g25"): ReportSetup {
   return {
     reportType: "evaluation",
     concerns: true,
+    concernIn: { motor: true, sensory: true },
     grade,
     pronoun: "he",
     assessments: {},
@@ -87,6 +88,8 @@ export function loadSetup(d: DisciplineId): ReportSetup {
       objectives: typeof p.objectives === "number" && p.objectives > 0 && p.objectives < 10 ? p.objectives : base.objectives,
       teacherAreas: p.teacherAreas && typeof p.teacherAreas === "object" ? { ...base.teacherAreas, ...p.teacherAreas } : teacherConcerns === false ? { fine: false, gross: false, sensory: false } : base.teacherAreas,
       serviceType: p.serviceType === "indirect" ? "indirect" : "direct",
+      // Setups saved before 2026-11-09 have no areas: a concern then meant both.
+      concernIn: p.concernIn && typeof p.concernIn === "object" ? { motor: p.concernIn.motor !== false, sensory: p.concernIn.sensory !== false } : base.concernIn,
       ratings,
     };
   } catch {

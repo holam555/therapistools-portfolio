@@ -17,6 +17,8 @@ describe("a ready-made pack", () => {
     const uses = packUses(pack);
     expect(uses.teacherAreas.size).toBe(0);
     expect(uses.serviceType).toBe(true);
+    expect(uses.concernIn).toBe(true);
+    expect(packUses(premadePack("slp")).concernIn).toBe(false);
     expect(uses.objectives).toBe(true);
     expect(uses.goalAreas).toEqual(["writing", "cutting", "selfcare"]);
     expect(optionalBlocks(pack).filter((x) => x.assessment.id === "screen").length).toBe(9 + 11 + 9);
@@ -243,5 +245,6 @@ describe("edit mode shows every paragraph", () => {
     expect(describeCondition({ teacherAreas: { sensory: false }, anyTeacherArea: true })).toBe("sensory not ticked · at least one teacher area ticked");
     expect(describeCondition({ assessments: { spm2: true, teacher: false } }, pack)).toBe("SPM-2 School form done · Teacher rating checklist not done");
     expect(describeCondition({ goalArea: "writing" })).toBe("writing standard chosen");
+    expect(describeCondition({ concernIn: { motor: false, sensory: true } })).toBe("no motor concern · sensory concern");
   });
 });

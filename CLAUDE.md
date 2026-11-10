@@ -63,7 +63,9 @@ The Report tab (`apps/iep/src/report/`) is the main IEP flow: setup, a Word
 draft with fixed wording, openers and yellow [[blanks]], and one AI prompt per
 section. Every discipline's template is a **template pack** (`report/pack.ts`):
 the report as plain data (assessments with optional rating grids, sections and
-paragraphs with `when` conditions on report type, concerns, grade, service
+paragraphs with `when` conditions on report type, concerns, areas of concern
+(motor, sensory: `setup.concernIn`, ticked under Result, so one can be a
+concern while the other is not), grade, service
 type, teacher areas, standards and assessments done; paragraphs can be tick
 boxes (`optional`, ticks in `setup.screenItems`), repeat per objective, and
 carry `{count}` and `{summary:<grid>}` slots), saved under

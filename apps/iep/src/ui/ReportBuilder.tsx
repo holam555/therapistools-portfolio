@@ -9,7 +9,7 @@ import type { PronounSet } from "../model/types";
 import { premadePack } from "../report/premade";
 import { readyMadeAssessments } from "../report/premade/assessments";
 import { loadSetup, loadValues, saveSetup, saveValues } from "../report/setup";
-import { GOAL_AREAS, GRADE_GROUPS, TEACHER_AREAS, type Block, type ReportSetup, type ReportValues } from "../report/types";
+import { CONCERN_AREAS, GOAL_AREAS, GRADE_GROUPS, TEACHER_AREAS, type Block, type ReportSetup, type ReportValues } from "../report/types";
 import { ImportDocument } from "./ImportDocument";
 import { useAccount } from "../account/AccountProvider";
 import { exportBackup } from "./backup";
@@ -255,7 +255,7 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
           </button>
         </div>
         <div data-tour="setup">
-          <SetupBasics setup={setup} patch={patch} onGrade={onGrade} />
+          <SetupBasics setup={setup} patch={patch} onGrade={onGrade} showConcernIn={uses.concernIn} />
         </div>
 
         <h3>What did you do?</h3>
@@ -548,7 +548,7 @@ function PackEditor({ pack, setPack, onDiscard }: { pack: TemplatePack; setPack:
 }
 
 /** Report type, result, grade and pronoun: the same for every template. */
-function SetupBasics({ setup, patch, onGrade }: { setup: ReportSetup; patch: (p: Partial<ReportSetup>) => void; onGrade: (g: ReportSetup["grade"]) => void }) {
+function SetupBasics({ setup, patch, onGrade, showConcernIn }: { setup: ReportSetup; patch: (p: Partial<ReportSetup>) => void; onGrade: (g: ReportSetup["grade"]) => void; showConcernIn: boolean }) {
   return (
     <>
       <div className="setup-row">
@@ -565,6 +565,18 @@ function SetupBasics({ setup, patch, onGrade }: { setup: ReportSetup; patch: (p:
           <button type="button" className={!setup.concerns ? "on" : ""} onClick={() => patch({ concerns: false })}>{setup.reportType === "evaluation" ? "No concerns" : "No"}</button>
         </span>
       </div>
+      {setup.concerns && showConcernIn && (
+        <div className="setup-row">
+          <span className="setup-label">Areas of concern</span>
+          <span className="row gap wrap">
+            {CONCERN_AREAS.map((a) => (
+              <label key={a.id} className="check">
+                <input type="checkbox" checked={setup.concernIn[a.id]} onChange={(e) => patch({ concernIn: { ...setup.concernIn, [a.id]: e.target.checked } })} /> {a.label}
+              </label>
+            ))}
+          </span>
+        </div>
+      )}
       <div className="setup-row">
         <span className="setup-label">Grade</span>
         <span className="seg">

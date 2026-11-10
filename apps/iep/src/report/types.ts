@@ -36,11 +36,20 @@ export const TEACHER_AREAS: { id: TeacherArea; label: string }[] = [
   { id: "sensory", label: "Sensory" },
 ];
 export type ServiceType = "direct" | "indirect";
+/** Where the evaluation found concerns. One can be a concern while the other is not. */
+export type ConcernArea = "motor" | "sensory";
+export type ConcernIn = Record<ConcernArea, boolean>;
+export const CONCERN_AREAS: { id: ConcernArea; label: string }[] = [
+  { id: "motor", label: "Motor" },
+  { id: "sensory", label: "Sensory" },
+];
 
 export interface ReportSetup {
   reportType: ReportType;
   /** Evaluation: concerns were found. Annual review: the student qualifies for services. */
   concerns: boolean;
+  /** With concerns found: which areas they are in. Ignored (both count as "no") when `concerns` is false. */
+  concernIn: ConcernIn;
   grade: GradeGroup;
   pronoun: PronounSet;
   /** Which assessments were done, by the pack's ids. Missing means done. */

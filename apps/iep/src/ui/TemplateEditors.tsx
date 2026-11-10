@@ -6,7 +6,7 @@ import { cloneGrid, newGridId, sameGrid, type GridDef, type GridGroup, type Grid
 import type { PackAssessment, PackCondition } from "../report/pack";
 import type { ReadyMadeAssessment } from "../report/premade/assessments";
 import { fromEditable, toEditable } from "../report/render";
-import { GOAL_AREAS, GRADE_GROUPS, TEACHER_AREAS, type Block, type GoalArea, type ReportType, type ServiceType, type TeacherAreas } from "../report/types";
+import { CONCERN_AREAS, GOAL_AREAS, GRADE_GROUPS, TEACHER_AREAS, type Block, type ConcernIn, type GoalArea, type ReportType, type ServiceType, type TeacherAreas } from "../report/types";
 import { Modal, confirmAction } from "./common";
 import { useApp } from "./state";
 
@@ -90,13 +90,19 @@ export function ConditionEditor({ value, onChange, assessments = [] }: { value: 
     else areas[id] = v === "yes";
     set({ teacherAreas: Object.keys(areas).length ? areas : undefined });
   };
+  const setConcern = (id: keyof ConcernIn, v: string) => {
+    const areas: Partial<ConcernIn> = { ...(c.concernIn ?? {}) };
+    if (v === "") delete areas[id];
+    else areas[id] = v === "yes";
+    set({ concernIn: Object.keys(areas).length ? areas : undefined });
+  };
   const setAssessment = (id: string, v: string) => {
     const on: Record<string, boolean> = { ...(c.assessments ?? {}) };
     if (v === "") delete on[id];
     else on[id] = v === "yes";
     set({ assessments: Object.keys(on).length ? on : undefined });
   };
-  const more = c.serviceType !== undefined || c.teacherAreas !== undefined || c.anyTeacherArea !== undefined || c.goalArea !== undefined || c.assessments !== undefined;
+  const more = c.concernIn !== undefined || c.serviceType !== undefined || c.teacherAreas !== undefined || c.anyTeacherArea !== undefined || c.goalArea !== undefined || c.assessments !== undefined;
   return (
     <>
       <div className="grid2">
@@ -136,7 +142,20 @@ export function ConditionEditor({ value, onChange, assessments = [] }: { value: 
         </span>
       </div>
       <details className="cond-more" open={more}>
-        <summary>More conditions: services, teacher checklist areas, standards, assessments done</summary>
+        <summary>More conditions: areas of concern, services, teacher checklist areas, standards, assessments done</summary>
+        <span className="field-label">Areas of concern (the ticks under Result)</span>
+        <div className="cond-row">
+          {CONCERN_AREAS.map((a) => (
+            <label key={a.id}>
+              {a.label}
+              <select value={yesNo(c.concernIn?.[a.id])} onChange={(e) => setConcern(a.id, e.target.value)}>
+                <option value="">Either</option>
+                <option value="yes">A concern</option>
+                <option value="no">Not a concern</option>
+              </select>
+            </label>
+          ))}
+        </div>
         <div className="cond-row">
           <label>
             Services

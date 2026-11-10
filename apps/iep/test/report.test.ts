@@ -1,15 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { starterLibrary } from "../src/model/defaults";
 import { cloneGrid, groupSentences, normalizeGrid, ratingKey, type GridDef } from "../src/report/grids";
 import { joinList, parseBlank } from "../src/report/options";
-import { packGrids, packSections, type TemplatePack } from "../src/report/pack";
+import { conditionHolds, normalizePack, packGrids, packSections, type TemplatePack } from "../src/report/pack";
 import { premadePack } from "../src/report/premade";
 import { scanReportText } from "../src/report/privacy-words";
 import { blanksIn, fillPattern, fromEditable, renderSection, sectionText, toEditable } from "../src/report/render";
 import { buildReportDocx, reportDocxBuffer } from "../src/report/report-docx";
 import { buildSectionPrompt, needsPrompt } from "../src/report/report-prompt";
 import { blankSuggestions, fitToBlank, liftFills, relevantSentences, sampleSentences, wordingPattern } from "../src/report/samples";
-import { defaultSetup, migrateSpmKeys, migrateValueKeys } from "../src/report/setup";
+import { defaultSetup, loadSetup, migrateSpmKeys, migrateValueKeys } from "../src/report/setup";
 import type { ReportSetup } from "../src/report/types";
 
 // The ready-made OT template, as a report. The generic checks every ready-made
@@ -387,5 +387,42 @@ describe("what the blank picker offers", () => {
     const grasp = screen.blocks.find((b) => b.id === "g25-grasp")!;
     expect(liftFills(grasp.text, 0, screen.examples, "he")).toEqual(["left-handed"]);
     expect(liftFills(grasp.text, 1, screen.examples, "he")).toEqual(["thumb wrap"]);
+  });
+});
+
+describe("areas of concern", () => {
+  const summary = (p: Partial<ReportSetup>) => sectionText(find("summary", p), "he");
+
+  it("writes motor and sensory apart, so one can be a concern while the other is not", () => {
+    const both = summary({});
+    expect(both).toContain("Motor: His fine motor and visual-motor skills are an area of concern: [[what the screen and testing showed]].");
+    expect(both).toContain("Sensory: His sensory processing is an area of concern: [[what it looks like in class and what helps]].");
+    const sensoryOnly = summary({ concernIn: { motor: false, sensory: true } });
+    expect(sensoryOnly).toContain("Motor: His fine motor and visual-motor skills are within the range expected for his grade.");
+    expect(sensoryOnly).toContain("Sensory: His sensory processing is an area of concern");
+    expect(sensoryOnly).not.toContain("skills are an area of concern");
+    const motorOnly = summary({ concernIn: { motor: true, sensory: false } });
+    expect(motorOnly).toContain("Motor: His fine motor and visual-motor skills are an area of concern");
+    expect(motorOnly).toContain("Sensory: No sensory concerns that interfere with learning or participation were found.");
+  });
+
+  it("counts every area as no concern when the result is no concerns, and reads old setups as both", () => {
+    const none: ReportSetup = { ...allTicked(), concerns: false };
+    expect(conditionHolds({ concernIn: { sensory: true } }, none)).toBe(false);
+    expect(conditionHolds({ concernIn: { sensory: false, motor: false } }, none)).toBe(true);
+    expect(conditionHolds({ concernIn: { motor: true } }, allTicked())).toBe(true);
+    const store = new Map<string, string>();
+    vi.stubGlobal("localStorage", { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) });
+    store.set("easyiep.report", JSON.stringify({ reportType: "evaluation", concerns: true, grade: "g25" }));
+    expect(loadSetup("ot").concernIn).toEqual({ motor: true, sensory: true });
+    store.set("easyiep.report", JSON.stringify({ concerns: true, concernIn: { motor: false } }));
+    expect(loadSetup("ot").concernIn).toEqual({ motor: false, sensory: true });
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps the condition through storage", () => {
+    const back = normalizePack(JSON.parse(JSON.stringify(pack)))!;
+    const s = back.sections.find((x) => x.id === "summary")!;
+    expect(s.blocks.find((b) => b.id === "motor-none")).toMatchObject({ when: { concernIn: { motor: false } } });
   });
 });
