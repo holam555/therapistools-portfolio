@@ -85,7 +85,12 @@ a { color: var(--accent); text-underline-offset: 2px; }
 .tab.active { background: var(--accent); color: #fff; }
 .tab:disabled { cursor: default; opacity: 0.5; }
 .tab small { font-weight: 400; font-size: 0.75rem; }
-.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; justify-content: flex-end; max-width: 100%; }
+/* On a phone the right-hand controls take their own row and wrap, so Sign in is never pushed off the edge. */
+@media (max-width: 640px) {
+  .topbar { gap: 0.6rem 1rem; }
+  .topbar-right { margin-left: 0; width: 100%; justify-content: flex-start; gap: 0.5rem; }
+}
 .saved { min-width: 7rem; text-align: right; }
 .main { flex: 1; padding: 1.25rem; max-width: 1400px; width: 100%; margin: 0 auto; }
 

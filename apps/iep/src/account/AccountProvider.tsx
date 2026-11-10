@@ -98,11 +98,19 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     const sb = supabase();
     if (!sb) return;
     let alive = true;
-    sb.auth.getSession().then(({ data }) => {
-      if (!alive) return;
-      setUser(samePerson(userOf(data.session)));
-      setReady(true);
-    });
+    // The Sign in button waits for this check. If the check fails or never answers, show the button anyway.
+    const giveUp = window.setTimeout(() => alive && setReady(true), 4000);
+    sb.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!alive) return;
+        setUser(samePerson(userOf(data.session)));
+        setReady(true);
+      })
+      .catch(() => {
+        if (alive) setReady(true);
+      })
+      .finally(() => window.clearTimeout(giveUp));
     const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
       if (!alive) return;
       setUser(samePerson(userOf(session)));
@@ -114,6 +122,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     });
     return () => {
       alive = false;
+      window.clearTimeout(giveUp);
       sub.subscription.unsubscribe();
     };
   }, []);

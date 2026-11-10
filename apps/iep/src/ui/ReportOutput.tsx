@@ -111,7 +111,7 @@ export function ReportOutput({
       <section className="card">
         <div className="row gap between wrap">
           <h2>2. Fill the blanks, download Word</h2>
-          <span className="row gap">
+          <span className="row gap wrap">
             <button type="button" className={`btn btn-sm ${editMode ? "btn-accent" : ""}`} aria-pressed={editMode} onClick={() => setEditMode(!editMode)} data-tour="edit">
               {editMode ? "Done editing" : "Edit template"}
             </button>
