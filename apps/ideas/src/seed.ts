@@ -4,7 +4,8 @@ import { blankReel, parseInstagramUrl, type Reel } from "./reels";
  * The starter reels the owner picked (2026-11-13), as plain links. They show
  * when the reel list cannot be reached, and the owner's "Add the starter
  * reels" button copies them into the database once. Tags are added by the
- * owner in the app, so none are guessed here.
+ * owner in the app, so none are guessed here. One of the owner's picks is
+ * left out because Instagram does not allow it to be embedded.
  */
 const LINKS = [
   "https://www.instagram.com/reel/DdY-K3ZhZA4/",
@@ -20,7 +21,6 @@ const LINKS = [
   "https://www.instagram.com/reel/DfhLKTphFwO/",
   "https://www.instagram.com/reel/DcjuWE0oqOG/",
   "https://www.instagram.com/reel/Dfp468SIzUy/",
-  "https://www.instagram.com/reel/DbY1Wk5hrMF/",
   "https://www.instagram.com/reel/Dcqkd_xpkZo/",
   "https://www.instagram.com/reel/DeSbwlTS3SR/",
   "https://www.instagram.com/reel/DfNl5NwIpwL/",

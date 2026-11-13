@@ -13,14 +13,28 @@ interface Props {
 }
 
 /**
- * The swipe feed: one reel per screen, snapping as you scroll. Only the reel
- * on screen and its two neighbours hold an Instagram frame; the rest are
- * empty until you reach them.
+ * The swipe feed: one reel per screen, snapping as you scroll.
+ *
+ * Instagram serves a blank page when one browser asks for many embeds in a
+ * short time (seen 2026-11-13), so frames are loaded sparingly: only the reel
+ * on screen, only after it has stayed there a moment (swiping past loads
+ * nothing), and the last few stay loaded so going back asks for nothing new.
  */
+const DWELL_MS = 700;
+const KEEP_LOADED = 4;
+
 export function Feed({ reels, route, saved, owner, onToggleSave, onEdit, onClose }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(() => Math.max(0, reels.findIndex((r) => r.code === route.start)));
   const [toast, setToast] = useState("");
+  /** Codes of the reels whose frames are loaded, oldest first. */
+  const [loaded, setLoaded] = useState<string[]>([]);
+  const activeReel = reels[active]?.code;
+  useEffect(() => {
+    if (!activeReel) return;
+    const t = setTimeout(() => setLoaded((cur) => (cur.includes(activeReel) ? cur : [...cur, activeReel].slice(-KEEP_LOADED))), DWELL_MS);
+    return () => clearTimeout(t);
+  }, [activeReel]);
 
   // Start on the shared reel, once the list holds it.
   const started = useRef(false);
@@ -143,20 +157,24 @@ export function Feed({ reels, route, saved, owner, onToggleSave, onEdit, onClose
                 </div>
               </div>
               <div className="frame">
-                {Math.abs(i - active) <= 1 ? (
+                {loaded.includes(r.code) ? (
                   <iframe
                     src={embedUrl(r)}
                     title={`${r.title || "Activity idea"}, video from Instagram`}
-                    loading="lazy"
                     referrerPolicy="no-referrer"
                     sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
                     allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                     allowFullScreen
                   />
                 ) : (
-                  <div className="frame-wait" aria-hidden="true" />
+                  <div className="frame-wait" aria-hidden="true">
+                    ▶
+                  </div>
                 )}
               </div>
+              <p className="frame-help">
+                Video blank? <a href={permalink(r)} target="_blank" rel="noreferrer">Watch it on Instagram</a>
+              </p>
               <div className="slide-actions">
                 <span className="credit">
                   {r.creator ? `@${r.creator}` : "On Instagram"}
