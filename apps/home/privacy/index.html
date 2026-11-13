@@ -42,7 +42,7 @@
   <tt-suite-bar current="privacy"></tt-suite-bar>
   <main class="wrap">
     <h1>Privacy</h1>
-    <p class="updated">Covers every Therapistools tool. Last updated 2 November 2026.</p>
+    <p class="updated">Covers every Therapistools tool. Last updated 13 November 2026.</p>
 
     <div class="tt-card short">
       <h2>The short version</h2>
@@ -50,7 +50,8 @@
         <li>No sign-up is needed for any tool. Everything you make is saved in your own browser, on your own device.</li>
         <li>The IEP Writer has an optional account. It stores one thing: your report template, so it follows you to another computer. Never the report you are writing.</li>
         <li>No tool saves a child's or student's name. Students are placeholders or ID numbers.</li>
-        <li>Nothing you type is sent to us or to anyone else, except that template if you sign in.</li>
+        <li>Nothing you type is sent to us or to anyone else, except that template if you sign in, and a reel suggestion if you choose to send one.</li>
+        <li>Activity Ideas shows videos that play from Instagram. Instagram is contacted only once you start swiping, never on the other tools.</li>
         <li>No page counts visits or uses analytics of any kind. We only know how many accounts exist.</li>
       </ul>
     </div>
@@ -75,6 +76,7 @@
           <tr id="worksheets"><td><strong>Worksheets</strong></td><td>Your settings for each worksheet, print history, and child profiles with a nickname, age band and favorite themes.</td><td>Any child's name.</td></tr>
           <tr id="scheduler"><td><strong>Scheduler</strong></td><td>Schools, providers, students as ID numbers, grade schedules, booked sessions and planning rules. Spreadsheets you upload are read in the browser and only the result is saved.</td><td>Student names.</td></tr>
           <tr id="iep"><td><strong>IEP Writer</strong></td><td>Your report template, the blanks you filled, your ratings and setup choices, and any sentence library saved by an earlier version. If you sign in, the report template is also saved in your account.</td><td>Student names or any identifying details.</td></tr>
+          <tr id="ideas"><td><strong>Activity Ideas</strong></td><td>The list of reels you saved, as Instagram post codes.</td><td>Anything about students. Which reels you watch or save is never sent to us.</td></tr>
         </tbody>
       </table>
     </section>
@@ -82,11 +84,12 @@
     <section id="leaves">
       <h2>What leaves your device</h2>
       <table>
-        <thead><tr><th>What</th><th>Home and Privacy</th><th>Worksheets</th><th>Scheduler</th><th>IEP Writer</th></tr></thead>
+        <thead><tr><th>What</th><th>Home and Privacy</th><th>Worksheets</th><th>Scheduler</th><th>IEP Writer</th><th>Activity Ideas</th></tr></thead>
         <tbody>
-          <tr><td>Anything you type</td><td class="no">Never</td><td class="no">Never</td><td class="no">Never</td><td class="no">Never, except your report template if you sign in</td></tr>
-          <tr><td>Visit counts or analytics</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
-          <tr><td>Fonts from another company</td><td class="no">No</td><td class="yes">Yes, Google Fonts</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Anything you type</td><td class="no">Never</td><td class="no">Never</td><td class="no">Never</td><td class="no">Never, except your report template if you sign in</td><td class="yes">Only a suggestion you choose to send</td></tr>
+          <tr><td>Visit counts or analytics</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Fonts from another company</td><td class="no">No</td><td class="yes">Yes, Google Fonts</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+          <tr><td>Videos from another company</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes, Instagram, once you start swiping</td></tr>
         </tbody>
       </table>
 
@@ -102,11 +105,20 @@
       <p>Before each save, the same privacy check that runs on the Output tab reads the template. If it finds a full date, a phone number, an email address or a word on your never-allow list, the template is not saved to your account until you remove it.</p>
       <p>The account server is run by Supabase, a hosting company, in a project we control. It holds your email address, when you last signed in, and your template. Data is encrypted on the way there and at rest. Only you can read your rows: the database enforces it, not just the page. If you sign in with Google, Google learns that you signed in to this site; we receive your email address from Google and nothing else. Sign-in emails are sent through Resend, an email delivery service, which sees your email address and the sign-in code and nothing else. Deleting your account removes your template; ask through the feedback form and we do it within a week.</p>
 
+      <h3 id="ideas-data">Activity Ideas</h3>
+      <p>Activity Ideas is a library of short videos picked by therapists. It works differently from the other tools in three ways.</p>
+      <ul>
+        <li><strong>The reel list.</strong> When the page opens it fetches the list of reels (titles, tags and Instagram post codes) from our database, which is run by Supabase, the same hosting company as the IEP Writer account. That request carries nothing about you beyond the standard details every web request has, such as your IP address.</li>
+        <li><strong>The videos.</strong> We do not copy or host any video. When you start swiping, each video is shown in a frame served by Instagram, so Instagram (Meta) receives a standard request including your IP address, and may set its own cookies inside that frame, as it would if you opened the video on Instagram. Nothing loads from Instagram on the Activity Ideas front page or anywhere else on this site, and we do not tell Instagram what you save.</li>
+        <li><strong>Suggestions.</strong> If you suggest a reel, we receive the link, your one sentence about it, the skill area if you pick one, and a name or handle if you give one. The name is shown next to the reel if we publish it. Please keep students out of it. Suggestions we do not use are deleted within 90 days.</li>
+      </ul>
+      <p>Saved ideas stay in your browser. If a reel of yours is in the library and you want it removed, tell us through the feedback form and we take it down.</p>
+
       <h3>Fonts</h3>
       <p>The Worksheets pages load some fonts from Google Fonts, so Google receives a standard request, including your IP address, when those pages open. Every other page uses fonts served from this site. We plan to move Worksheets onto our own fonts too.</p>
 
       <h3>The web host</h3>
-      <p>The site runs on our own server. Requests reach it through Cloudflare, which protects the server and delivers the pages quickly. Like every web service, the server and Cloudflare receive standard request details, such as your IP address and which page was requested, in order to send you the page. We do not use those details to track anyone. Neither ever receives your work, because your work is never sent to them; the IEP Writer account server is the only place anything of yours goes, and only your template.</p>
+      <p>The site runs on our own server. Requests reach it through Cloudflare, which protects the server and delivers the pages quickly. Like every web service, the server and Cloudflare receive standard request details, such as your IP address and which page was requested, in order to send you the page. We do not use those details to track anyone. Neither ever receives your work, because your work is never sent to them; the only things of yours that go anywhere are your IEP Writer template, to its account server if you sign in, and a reel suggestion if you send one.</p>
 
       <h3>Forms you choose to open</h3>
       <p>The Scheduler has "Give feedback" and "Get updates" buttons. They open forms hosted by Tally in a new tab. Nothing is sent unless you fill one in and submit it, and only what you type into the form.</p>

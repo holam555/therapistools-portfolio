@@ -2,7 +2,7 @@ export declare const BRAND: string;
 export declare const SITE_ORIGIN: string;
 export declare const TAGLINE: string;
 export interface ToolInfo {
-  id: "worksheets" | "scheduler" | "iep";
+  id: "worksheets" | "scheduler" | "iep" | "ideas";
   name: string;
   path: string;
   blurb: string;
