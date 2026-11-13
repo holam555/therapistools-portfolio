@@ -29,11 +29,11 @@ per screen, saves the ones they like and can suggest a reel of their own.
   and why tags come from text the owner pastes, not from Instagram.
 - Nothing loads from Instagram on the front page, only in the feed.
 - Nothing is published without the owner: suggestions are stored as pending.
-- Instagram serves a blank white page when one browser asks for many embeds
-  in a short time (seen 2026-11-13 while testing). The feed therefore loads
-  one frame at a time, only after a reel has stayed on screen for a moment,
-  and every slide carries a "Watch it on Instagram" link. Do not go back to
-  preloading neighbours.
+- The feed holds exactly one Instagram frame: the reel on screen, loaded
+  after it has stayed there a moment. Leaving a reel removes its frame; that
+  is the only way to stop its video, since the page cannot reach inside the
+  frame. Every slide carries a "Watch it on Instagram" link for when a frame
+  comes up blank (seen in the Claude app's built-in browser, not in Chrome).
 - A broken video cannot be detected: Instagram answers the same for a deleted
   post, and the page cannot see inside the frame.
 

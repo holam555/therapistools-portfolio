@@ -16,6 +16,8 @@ export default function App() {
   const [owner, setOwner] = useState(false);
   /** True once the reel list has answered: only then are suggesting and owner sign-in offered. */
   const [online, setOnline] = useState(false);
+  /** False while the first answer from the reel list is awaited; the feed waits for it so its list never swaps under the viewer. */
+  const [settled, setSettled] = useState(!api.backendEnabled);
   const [saved, setSaved] = useState<string[]>(() => readSaved());
   const [dialog, setDialog] = useState<Dialog>(null);
 
@@ -43,6 +45,8 @@ export default function App() {
       }
     } catch {
       // Offline, the project asleep, or the table not made yet: keep the starter list.
+    } finally {
+      setSettled(true);
     }
   }, []);
   useEffect(() => void reload(), [reload]);
@@ -62,7 +66,9 @@ export default function App() {
 
   return (
     <>
-      {route.view === "feed" ? (
+      {route.view === "feed" && !settled ? (
+        <div className="feed" role="status" aria-label="Loading ideas" />
+      ) : route.view === "feed" ? (
         <Feed
           reels={feedReels}
           route={route}

@@ -15,24 +15,23 @@ interface Props {
 /**
  * The swipe feed: one reel per screen, snapping as you scroll.
  *
- * Instagram serves a blank page when one browser asks for many embeds in a
- * short time (seen 2026-11-13), so frames are loaded sparingly: only the reel
- * on screen, only after it has stayed there a moment (swiping past loads
- * nothing), and the last few stay loaded so going back asks for nothing new.
+ * Exactly one Instagram frame exists at a time: the reel on screen, once it
+ * has stayed there a moment (swiping past loads nothing). Leaving a reel
+ * removes its frame, which is the only way to stop its video and sound: the
+ * page cannot reach inside Instagram's frame to pause it.
  */
-const DWELL_MS = 700;
-const KEEP_LOADED = 4;
+const DWELL_MS = 500;
 
 export function Feed({ reels, route, saved, owner, onToggleSave, onEdit, onClose }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(() => Math.max(0, reels.findIndex((r) => r.code === route.start)));
   const [toast, setToast] = useState("");
-  /** Codes of the reels whose frames are loaded, oldest first. */
-  const [loaded, setLoaded] = useState<string[]>([]);
+  /** The one reel whose frame is loaded. */
+  const [loaded, setLoaded] = useState<string | undefined>();
   const activeReel = reels[active]?.code;
   useEffect(() => {
     if (!activeReel) return;
-    const t = setTimeout(() => setLoaded((cur) => (cur.includes(activeReel) ? cur : [...cur, activeReel].slice(-KEEP_LOADED))), DWELL_MS);
+    const t = setTimeout(() => setLoaded(activeReel), DWELL_MS);
     return () => clearTimeout(t);
   }, [activeReel]);
 
@@ -157,7 +156,7 @@ export function Feed({ reels, route, saved, owner, onToggleSave, onEdit, onClose
                 </div>
               </div>
               <div className="frame">
-                {loaded.includes(r.code) ? (
+                {loaded === r.code && activeReel === r.code ? (
                   <iframe
                     src={embedUrl(r)}
                     title={`${r.title || "Activity idea"}, video from Instagram`}
