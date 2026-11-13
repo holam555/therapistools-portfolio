@@ -68,9 +68,13 @@ function toRow(r: Reel) {
   };
 }
 
-/** Published reels for visitors; every reel for the owner (the database decides which). Newest first. */
+/**
+ * Published reels for visitors; every reel for the owner (the database decides which). Newest first.
+ * Reels added together share one timestamp, so the code breaks the tie: without it the order
+ * shuffles after every edit and the feed reloads its video frames.
+ */
 export async function fetchReels(): Promise<Reel[]> {
-  const { data, error } = await sb().from(TABLE).select("*").order("created_at", { ascending: false }).limit(1000);
+  const { data, error } = await sb().from(TABLE).select("*").order("created_at", { ascending: false }).order("code").limit(1000);
   if (error) throw new Error(error.message);
   return (data as Row[]).map(fromRow);
 }

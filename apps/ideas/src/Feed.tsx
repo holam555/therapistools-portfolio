@@ -35,6 +35,21 @@ export function Feed({ reels, route, saved, owner, onToggleSave, onEdit, onClose
     }
   }, [reels, route.start]);
 
+  // When the list changes under the feed (the owner saved an edit), stay on the same reel.
+  const activeCode = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const i = reels.findIndex((r) => r.code === activeCode.current);
+    if (i >= 0 && i !== active) {
+      scroller.current?.children[i]?.scrollIntoView();
+      setActive(i);
+    }
+    // Only when the list itself changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reels]);
+  useEffect(() => {
+    activeCode.current = reels[active]?.code;
+  }, [reels, active]);
+
   useEffect(() => {
     const root = scroller.current;
     if (!root) return;
