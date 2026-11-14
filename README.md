@@ -71,6 +71,13 @@ Printable OT worksheets generated from practice-based templates, adjusted to
 a child's handwriting and visual-perception needs. A name typed for printing
 lives only in memory and is stripped before anything is saved or shared.
 
+### Activity Ideas, `/ideas/`
+
+A therapist-picked library of short Instagram videos showing OT activities,
+browsed by skill area and grade in a swipe feed. Videos play from Instagram
+and are credited to their creators; visitors save favourites in their browser
+and can suggest reels, which the owner reviews before anything is published.
+
 ## Repository layout
 
 | Part | Path | Source |
@@ -79,6 +86,7 @@ lives only in memory and is stripped before anything is saved or shared.
 | IEP Writer | `/iep/` | `apps/iep` (React, Vite) |
 | Scheduler | `/scheduler/` | `apps/scheduler` (React, Vite) |
 | Worksheets | `/worksheets/` | `apps/worksheets` (React, Vite) |
+| Activity Ideas | `/ideas/` | `apps/ideas` (React, Vite) |
 | Shared look | | `shared/` (brand tokens, fonts, suite bar; no dependencies) |
 
 Each app has its own README with the details of that tool. The agent guide

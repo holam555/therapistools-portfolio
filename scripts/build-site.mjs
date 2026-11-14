@@ -5,6 +5,7 @@
  *   dist/shared/                             brand.css, fonts, Therapistools bar (shared/)
  *   dist/worksheets/                         apps/worksheets (prerendered SPA)
  *   dist/scheduler/                          apps/scheduler (hash-routed SPA)
+ *   dist/ideas/                              apps/ideas (hash-routed SPA; reel list from Supabase, video frames from Instagram)
  *   dist/iep/index.html                      apps/iep (single file; may talk to its account server)
  *   dist/iep/therapistools-iep-writer.html    the offline build of the same app, offered as a download
  */
@@ -31,6 +32,9 @@ cpSync(app("worksheets", "dist"), join(out, "worksheets"), { recursive: true });
 build("scheduler");
 cpSync(app("scheduler", "dist"), join(out, "scheduler"), { recursive: true });
 
+build("ideas");
+cpSync(app("ideas", "dist"), join(out, "ideas"), { recursive: true });
+
 build("iep");
 mkdirSync(join(out, "iep"), { recursive: true });
 copyFileSync(app("iep", "dist", "easyiep.html"), join(out, "iep", "index.html"));
@@ -41,7 +45,7 @@ cpSync(app("home"), out, { recursive: true });
 cpSync(join(root, "shared"), join(out, "shared"), { recursive: true, filter: (src) => !src.endsWith(".d.ts") });
 
 // Sanity checks: every entry point exists, and no local file paths leaked into the output.
-const required = ["shared/brand.css", "shared/suite-bar.js", "index.html", "privacy/index.html", "terms/index.html", "robots.txt", "llms.txt", "worksheets/index.html", "scheduler/index.html", "iep/index.html"];
+const required = ["shared/brand.css", "shared/suite-bar.js", "index.html", "privacy/index.html", "terms/index.html", "robots.txt", "llms.txt", "worksheets/index.html", "scheduler/index.html", "ideas/index.html", "iep/index.html"];
 for (const f of required) if (!existsSync(join(out, f))) throw new Error(`missing ${f} in dist`);
 function* files(dir) {
   for (const e of readdirSync(dir)) {

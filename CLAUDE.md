@@ -3,8 +3,8 @@
 **New session or new account? Read [docs/HANDOFF.md](docs/HANDOFF.md) first.**
 It holds the owner's preferences, the decisions already made, and the next steps.
 
-One static site, four parts: `apps/home`, `apps/worksheets`, `apps/scheduler`,
-`apps/iep`. What each is and the commands: [README.md](README.md). Each app
+One static site, five parts: `apps/home`, `apps/worksheets`, `apps/scheduler`,
+`apps/iep`, `apps/ideas`. What each is and the commands: [README.md](README.md). Each app
 also has its own docs; read them before changing that app.
 
 ## Rules (do not weaken)
@@ -56,6 +56,16 @@ also has its own docs; read them before changing that app.
    serving or deploying, read [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
    (decisions, runbooks, lessons). The Caddyfile, publish script and deploy
    gate are applied to the box by hand; a deploy does not update them.
+
+## Activity Ideas
+
+`apps/ideas` (`/ideas/`, added 2026-11-13) is a swipe feed of Instagram
+videos by skill area and grade. It is the one tool that shows other people's
+content and takes public submissions, so its rules are its own: Instagram
+only through the official embed in a frame, nothing scraped or stored from
+Instagram, nothing published without the owner. The rules, the database and
+the owner guide: [apps/ideas/README.md](apps/ideas/README.md). It reads the
+Supabase address from `apps/iep/.env`.
 
 ## IEP Writer report builder
 

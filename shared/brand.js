@@ -7,14 +7,15 @@ export const BRAND = "Therapistools";
 export const SITE_ORIGIN = "https://www.therapistools.com";
 export const TAGLINE = "Free tools for K-12 educators and school therapists";
 
-/** The tools, in display order: plan, write, print. Each tool's color is --tt-cat-<id> in brand.css. */
+/** The tools, in display order: plan, write, print, then find ideas. Each tool's color is --tt-cat-<id> in brand.css. */
 export const TOOLS = [
   { id: "scheduler", name: "Scheduler", path: "/scheduler/", blurb: "Caseload gaps and session booking" },
   { id: "iep", name: "IEP Writer", path: "/iep/", blurb: "IEP sections from your own sentences" },
   { id: "worksheets", name: "Worksheets", path: "/worksheets/", blurb: "Printable practice worksheets" },
+  { id: "ideas", name: "Activity Ideas", path: "/ideas/", blurb: "OT activity videos by skill" },
 ];
 
-/** The one privacy page for the whole site. Tool sections: #worksheets, #scheduler, #iep. */
+/** The one privacy page for the whole site. Tool sections: #worksheets, #scheduler, #iep, #ideas. */
 export const PRIVACY_PATH = "/privacy/";
 
 /** Online forms (hosted by Tally) people can choose to open. Nothing is sent unless they submit one. */

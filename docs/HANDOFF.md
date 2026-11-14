@@ -37,6 +37,13 @@ tunnel). The box: [INFRA.md](INFRA.md). How deploys work, runbooks and
 lessons: [DEPLOYMENT.md](DEPLOYMENT.md). It was never deployed
 to Vercel, so there are no old addresses to redirect.
 
+**Activity Ideas** (`apps/ideas`, `/ideas/`, built 2026-11-13) is the fourth
+tool: a swipe feed of Instagram videos by skill area and grade, with saved
+ideas, suggestions and owner editing. The owner wants it to grow a community;
+they asked for comments ("what would you change or adapt") as a later step,
+and agreed to leave AI tagging out for now. Everything about it:
+[apps/ideas/README.md](../apps/ideas/README.md).
+
 ## Working with the owner
 
 - They are not a developer. Explain in plain words, give exact steps to test,

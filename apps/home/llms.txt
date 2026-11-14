@@ -7,6 +7,7 @@
 - Scheduler: https://www.therapistools.com/scheduler/ : finds every student's open time across class schedules and books therapy sessions without double-booking. Students are referenced by ID number only.
 - IEP Writer: https://www.therapistools.com/iep/ : drafts IEP sections (present levels, goals, objectives, accommodations) from the writer's own sentence bank, for OT (starter library included), speech, PT, school psychology and special education, with a privacy check and a prompt for handing blanks to an AI chatbot. Works offline (a downloadable single file makes no connections); an optional account stores only the report template; students are always written as [STUDENT].
 - Worksheets: https://www.therapistools.com/worksheets/ : printable OT worksheets for children aged 2-12 (details below).
+- Activity Ideas: https://www.therapistools.com/ideas/ : a therapist-picked library of short Instagram videos showing school OT activities, browsable by skill area and grade in a swipe feed. Videos are embedded from Instagram and credited to their creators; anyone can suggest a reel.
 
 - Privacy: https://www.therapistools.com/privacy/ : one page covering every tool; no sign-up needed, no child or student names stored, optional IEP Writer account stores only a template.
 - Terms of use: https://www.therapistools.com/terms/ : free tools provided as they are; your work is yours; keep student details out; optional IEP Writer account stores only a template and is deleted on request.
