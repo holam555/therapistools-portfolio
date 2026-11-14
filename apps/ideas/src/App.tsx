@@ -3,7 +3,7 @@ import * as api from "./api";
 import { Feed } from "./Feed";
 import { Home } from "./Home";
 import { BulkAdd, CheckReels, EditReel, OwnerSignIn, Suggest } from "./Dialogs";
-import { applyFilter, parseRoute, routeHash, type Reel, type Route } from "./reels";
+import { applyFilter, parseRoute, rankReels, routeHash, type Reel, type Route } from "./reels";
 import { readSaved, toggleSaved, writeSaved } from "./saved";
 import { SEED_REELS } from "./seed";
 
@@ -60,7 +60,7 @@ export default function App() {
     });
   }, []);
 
-  const published = useMemo(() => reels.filter((r) => r.status === "published"), [reels]);
+  const published = useMemo(() => rankReels(reels.filter((r) => r.status === "published")), [reels]);
   const pending = useMemo(() => reels.filter((r) => r.status === "pending"), [reels]);
   const feedReels = useMemo(() => (route.review && owner ? pending : applyFilter(published, route.filter, savedSet)), [route, owner, pending, published, savedSet]);
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyFilter, blankReel, embedUrl, parseBulk, parseInstagramUrl, parseRoute, routeHash } from "../src/reels";
+import { applyFilter, blankReel, embedUrl, parseBulk, parseInstagramUrl, parseRoute, rankReels, routeHash } from "../src/reels";
 import { readSaved, toggleSaved } from "../src/saved";
 import { SEED_REELS } from "../src/seed";
 import { readPastedDetails, suggestTags } from "../src/taxonomy";
@@ -50,11 +50,13 @@ describe("pasted details", () => {
       creator: "some.ot",
       skills: ["sensory", "classroom-support"],
       grades: [],
+      instagramOnly: false,
     });
+    expect(readPastedDetails("title: x\nplays: Instagram").instagramOnly).toBe(true);
     expect(readPastedDetails("tags: visual motor, pre-writing").skills).toEqual(["pre-writing", "visual-motor"]);
   });
   it("falls back to the keyword rules for a plain caption", () => {
-    expect(readPastedDetails("Heavy work for kindergarten #sensory")).toEqual({ title: "", creator: "", skills: ["sensory"], grades: ["prek-1"] });
+    expect(readPastedDetails("Heavy work for kindergarten #sensory")).toEqual({ title: "", creator: "", skills: ["sensory"], grades: ["prek-1"], instagramOnly: false });
   });
 });
 
@@ -65,6 +67,10 @@ describe("filters and routes", () => {
     expect(applyFilter([a, b], { skill: "sensory" }, new Set()).map((r) => r.code)).toEqual(["aaaaa1"]);
     expect(applyFilter([a, b], { grade: "2-5" }, new Set()).map((r) => r.code)).toEqual(["bbbbb2"]);
     expect(applyFilter([a, b], { saved: true }, new Set(["bbbbb2"])).map((r) => r.code)).toEqual(["bbbbb2"]);
+  });
+  it("ranks reels that only play on Instagram last, keeping the order otherwise", () => {
+    const c = { ...blankReel("reel", "ccccc3"), instagramOnly: true };
+    expect(rankReels([c, a, b]).map((r) => r.code)).toEqual(["aaaaa1", "bbbbb2", "ccccc3"]);
   });
   it("round-trips a route through the URL hash and ignores junk", () => {
     const r = { view: "feed" as const, filter: { skill: "sensory" as const, grade: "2-5" as const, saved: undefined }, start: "aaaaa1", review: undefined };

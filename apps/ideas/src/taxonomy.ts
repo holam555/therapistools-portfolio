@@ -56,19 +56,21 @@ export function suggestTags(text: string): { skills: SkillId[]; grades: GradeId[
 
 /**
  * Reads the text pasted under a link in "Add in bulk". Lines that start with
- * "title:", "tags:" or "by:" set those fields outright; anything else is
+ * "title:", "tags:", "by:" or "plays: instagram" set those fields outright; anything else is
  * treated as a caption and only used to suggest tags.
  */
-export function readPastedDetails(text: string): { title: string; creator: string; skills: SkillId[]; grades: GradeId[] } {
+export function readPastedDetails(text: string): { title: string; creator: string; skills: SkillId[]; grades: GradeId[]; instagramOnly: boolean } {
   let title = "";
   let creator = "";
   let named: SkillId[] | null = null;
+  let instagramOnly = false;
   const rest: string[] = [];
   const norm = (v: string) => v.toLowerCase().replace(/[^a-z]/g, "");
   for (const line of text.split("\n")) {
-    const m = line.match(/^\s*(title|tags?|by)\s*:\s*(.*)$/i);
+    const m = line.match(/^\s*(title|tags?|by|plays)\s*:\s*(.*)$/i);
     if (!m) rest.push(line);
     else if (m[1].toLowerCase() === "title") title = m[2].trim().slice(0, 80);
+    else if (m[1].toLowerCase() === "plays") instagramOnly = /instagram/i.test(m[2]);
     else if (m[1].toLowerCase() === "by") creator = m[2].trim().replace(/^@/, "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 30);
     else {
       const wanted = m[2].split(",").map(norm).filter(Boolean);
@@ -76,5 +78,5 @@ export function readPastedDetails(text: string): { title: string; creator: strin
     }
   }
   const guess = suggestTags(rest.join("\n"));
-  return { title, creator, skills: named ?? guess.skills, grades: guess.grades };
+  return { title, creator, skills: named ?? guess.skills, grades: guess.grades, instagramOnly };
 }

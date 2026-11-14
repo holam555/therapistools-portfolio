@@ -33,6 +33,7 @@ interface Row {
   submitter_name: string;
   submitter_note: string;
   created_at: string;
+  instagram_only?: boolean;
 }
 
 export function fromRow(r: Row): Reel {
@@ -49,6 +50,7 @@ export function fromRow(r: Row): Reel {
     submitterName: r.submitter_name ?? "",
     submitterNote: r.submitter_note ?? "",
     createdAt: r.created_at ?? "",
+    instagramOnly: r.instagram_only === true,
   };
 }
 
@@ -65,6 +67,7 @@ function toRow(r: Reel) {
     source: r.source,
     submitter_name: r.submitterName.trim(),
     submitter_note: r.submitterNote.trim(),
+    instagram_only: r.instagramOnly,
   };
 }
 
@@ -92,13 +95,30 @@ export async function suggestReel(s: { kind: Kind; code: string; note: string; n
 
 // --- Owner only (the database refuses these for anyone else) ---
 
+/**
+ * Until the instagram_only column exists (the second migration), the database
+ * refuses rows that name it. Saving then goes ahead without the flag, unless
+ * the flag is the very thing being set.
+ */
+const NO_COLUMN = "PGRST204";
+const withoutFlag = (row: ReturnType<typeof toRow>) => {
+  const { instagram_only: _dropped, ...rest } = row;
+  return rest;
+};
+const FLAG_HELP = 'To mark reels as "only plays on Instagram", run the second database script first (apps/ideas/README.md).';
+
 export async function saveReel(r: Reel): Promise<void> {
-  const { error } = await sb().from(TABLE).upsert(toRow(r), { onConflict: "code" });
+  let { error } = await sb().from(TABLE).upsert(toRow(r), { onConflict: "code" });
+  if (error?.code === NO_COLUMN) {
+    if (r.instagramOnly) throw new Error(FLAG_HELP);
+    ({ error } = await sb().from(TABLE).upsert(withoutFlag(toRow(r)), { onConflict: "code" }));
+  }
   if (error) throw new Error(error.message);
 }
 
 export async function addReels(reels: Reel[]): Promise<void> {
-  const { error } = await sb().from(TABLE).upsert(reels.map(toRow), { onConflict: "code", ignoreDuplicates: true });
+  let { error } = await sb().from(TABLE).upsert(reels.map(toRow), { onConflict: "code", ignoreDuplicates: true });
+  if (error?.code === NO_COLUMN) ({ error } = await sb().from(TABLE).upsert(reels.map((r) => withoutFlag(toRow(r))), { onConflict: "code", ignoreDuplicates: true }));
   if (error) throw new Error(error.message);
 }
 

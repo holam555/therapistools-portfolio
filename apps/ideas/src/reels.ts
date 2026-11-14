@@ -17,6 +17,8 @@ export interface Reel {
   submitterName: string;
   submitterNote: string;
   createdAt: string;
+  /** Opens Instagram when tapped instead of playing in place. Ticked by the owner; shown last. */
+  instagramOnly: boolean;
 }
 
 const CODE = /^[A-Za-z0-9_-]{5,20}$/;
@@ -45,7 +47,7 @@ export const permalink = (r: Pick<Reel, "kind" | "code">) => `https://www.instag
 export const embedUrl = (r: Pick<Reel, "kind" | "code">) => `${permalink(r)}embed/`;
 
 export function blankReel(kind: Kind, code: string): Reel {
-  return { code, kind, title: "", howTo: "", creator: "", skills: [], grades: [], status: "published", source: "owner", submitterName: "", submitterNote: "", createdAt: "" };
+  return { code, kind, title: "", howTo: "", creator: "", skills: [], grades: [], status: "published", source: "owner", submitterName: "", submitterNote: "", createdAt: "", instagramOnly: false };
 }
 
 export interface Filter {
@@ -59,6 +61,11 @@ export function applyFilter(reels: Reel[], f: Filter, saved: ReadonlySet<string>
   return reels.filter(
     (r) => (!f.skill || r.skills.includes(f.skill)) && (!f.grade || r.grades.length === 0 || r.grades.includes(f.grade)) && (!f.saved || saved.has(r.code)),
   );
+}
+
+/** Reels that play in place come first; the ones that only play on Instagram go last. The order within each group is kept. */
+export function rankReels(reels: Reel[]): Reel[] {
+  return [...reels.filter((r) => !r.instagramOnly), ...reels.filter((r) => r.instagramOnly)];
 }
 
 /** The feed's address: filters and the reel to start on live in the URL hash, so a view can be shared. */

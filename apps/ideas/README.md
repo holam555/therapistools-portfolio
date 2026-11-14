@@ -50,6 +50,8 @@ Any change to what leaves the device must also update
 
 1. In the Supabase dashboard, open the SQL editor, paste
    `supabase/migrations/20261113000000_ideas.sql` and run it.
+   Then do the same with `20261113010000_ideas_instagram_only.sql` (adds
+   the "only plays on Instagram" tick box; everything else works without it).
 2. Make yourself the owner: run the three lines at the bottom of that file
    with your own sign-in email. Do not save the email in the file.
 3. Open `/ideas/`, tap "Owner sign-in" at the bottom, and sign in with the
@@ -73,6 +75,10 @@ owner sign-in stay hidden.
   left alone.
 - **Review drafts and suggestions:** "Review drafts" opens them as a feed. Watch,
   tap Edit, fix the title and tags, then Publish or Reject.
+- **Reels that only play on Instagram:** some show "Watch on Instagram" and
+  open Instagram when tapped. Instagram does not report which, so tick
+  "Only plays on Instagram" in Edit (or add `plays: instagram` under the
+  link in Add in bulk). The feed shows those last.
 - **Find reels that stopped working:** "Check all reels" asks Instagram
   about each one and lists those it refuses, with a Hide button.
 - **Removal request:** open the reel in the feed, tap Edit, then "Hide from

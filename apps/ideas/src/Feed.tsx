@@ -152,6 +152,7 @@ export function Feed({ reels, route, saved, owner, onToggleSave, onEdit, onClose
                       {gradeLabel(g)}
                     </span>
                   ))}
+                  {r.instagramOnly && <span className="chip static">Opens in Instagram</span>}
                   {route.review && r.submitterNote && <span className="note">“{r.submitterNote}”</span>}
                 </div>
               </div>

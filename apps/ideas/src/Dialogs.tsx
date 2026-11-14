@@ -273,6 +273,12 @@ export function EditReel({ reel, isNew, known, onClose, onSaved }: { reel: Reel;
         </label>
         <Chips label="Skill areas" options={SKILL_AREAS} value={draft.skills} onChange={(skills) => set({ skills })} />
         <Chips label="Grades (none ticked means all)" options={GRADE_BANDS} value={draft.grades} onChange={(grades) => set({ grades })} />
+        <label className="tick">
+          <input type="checkbox" checked={draft.instagramOnly} onChange={(e) => set({ instagramOnly: e.target.checked })} />
+          <span>
+            Only plays on Instagram <span className="hint">The video says "Watch on Instagram". These are shown last</span>
+          </span>
+        </label>
         {draft.submitterName !== "" && (
           <label>
             Suggested by <span className="hint">Shown publicly; clear it to hide</span>
@@ -417,11 +423,14 @@ export function BulkAdd({ known, onClose, onAdded }: { known: Reel[]; onClose: (
     for (const [i, f] of found.entries()) {
       setBusy(`Checking ${i + 1} of ${found.length}…`);
       const d = readPastedDetails(f.text);
-      const reel: Reel = { ...blankReel(f.kind, f.code), title: d.title, creator: d.creator, skills: d.skills, grades: d.grades, status: "pending" };
+      const reel: Reel = { ...blankReel(f.kind, f.code), title: d.title, creator: d.creator, skills: d.skills, grades: d.grades, instagramOnly: d.instagramOnly, status: "pending" };
       const existing = known.find((r) => r.code === f.code);
-      if (existing && !existing.title && d.title) {
+      if (existing && existing.title && d.instagramOnly && !existing.instagramOnly) {
+        // A titled reel is left alone, except for being marked as Instagram-only.
+        out.push({ state: "update", reel: { ...existing, instagramOnly: true } });
+      } else if (existing && !existing.title && d.title) {
         // Fill in an untitled reel; keep whatever the owner already set.
-        out.push({ state: "update", reel: { ...existing, title: d.title, creator: existing.creator || d.creator, skills: existing.skills.length ? existing.skills : d.skills, grades: existing.grades.length ? existing.grades : d.grades } });
+        out.push({ state: "update", reel: { ...existing, instagramOnly: existing.instagramOnly || d.instagramOnly, title: d.title, creator: existing.creator || d.creator, skills: existing.skills.length ? existing.skills : d.skills, grades: existing.grades.length ? existing.grades : d.grades } });
       } else if (existing) out.push({ reel: existing, state: "have" });
       else {
         out.push({ reel, state: (await checkEmbed(f)) === "blocked" ? "blocked" : "new" });
@@ -472,7 +481,7 @@ export function BulkAdd({ known, onClose, onAdded }: { known: Reel[]; onClose: (
         ) : rows === null ? (
           <>
             <label>
-              Paste your links <span className="hint">One or many. Under a link you can add lines starting with title:, tags: and by:, or paste the caption to have tags ticked for you</span>
+              Paste your links <span className="hint">One or many. Under a link you can add lines starting with title:, tags:, by: and plays: instagram, or paste the caption to have tags ticked for you</span>
               <textarea rows={9} value={text} onChange={(e) => setText(e.target.value)} placeholder={"https://www.instagram.com/reel/…\n(caption, optional)\n\nhttps://www.instagram.com/reel/…"} />
             </label>
             {error && (
@@ -493,7 +502,7 @@ export function BulkAdd({ known, onClose, onAdded }: { known: Reel[]; onClose: (
                     {reel.title || reel.code}
                   </a>
                   <span className="small">
-                    {state === "update" ? `Fill in: ${reel.skills.map(skillLabel).join(", ") || "no tags"}` : state === "have" ? "Already in the library, left as it is" : state === "blocked" ? "Instagram won't allow it on other sites" : reel.skills.length ? reel.skills.map(skillLabel).join(", ") : "No tags found"}
+                    {state === "update" ? `Fill in: ${reel.skills.map(skillLabel).join(", ") || "no tags"}${reel.instagramOnly ? " · only plays on Instagram" : ""}` : state === "have" ? "Already in the library, left as it is" : state === "blocked" ? "Instagram won't allow it on other sites" : reel.skills.length ? reel.skills.map(skillLabel).join(", ") : "No tags found"}
                   </span>
                 </li>
               ))}
