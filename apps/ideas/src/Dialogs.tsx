@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as api from "./api";
 import { BLOCKED_MESSAGE, checkEmbed } from "./embedCheck";
 import { blankReel, parseBulk, parseInstagramUrl, permalink, type Reel, type Status } from "./reels";
-import { GRADE_BANDS, SKILL_AREAS, skillLabel, suggestTags, type GradeId, type SkillId } from "./taxonomy";
+import { GRADE_BANDS, SKILL_AREAS, readPastedDetails, skillLabel, suggestTags, type GradeId, type SkillId } from "./taxonomy";
 
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -393,13 +393,14 @@ export function CheckReels({ reels, onClose, onChanged }: { reels: Reel[]; onClo
   );
 }
 
-type BulkRow = { reel: Reel; state: "new" | "have" | "blocked" };
+type BulkRow = { reel: Reel; state: "new" | "update" | "have" | "blocked" };
 
 /**
  * The owner pastes many links at once, each optionally followed by its
- * caption. Every new reel is checked with Instagram, tagged from the pasted
- * text by the keyword rules, and saved as a draft for review. The pasted text
- * is read for tags and then dropped; it is not saved.
+ * caption, or by "title:", "tags:" and "by:" lines. Every new reel is checked
+ * with Instagram and saved as a draft for review; a reel already in the
+ * library that has no title yet is filled in, and one that has a title is
+ * left alone. A pasted caption is read for tags and then dropped.
  */
 export function BulkAdd({ known, onClose, onAdded }: { known: Reel[]; onClose: () => void; onAdded: () => Promise<void> }) {
   const [text, setText] = useState("");
@@ -415,9 +416,13 @@ export function BulkAdd({ known, onClose, onAdded }: { known: Reel[]; onClose: (
     const out: BulkRow[] = [];
     for (const [i, f] of found.entries()) {
       setBusy(`Checking ${i + 1} of ${found.length}…`);
-      const tags = suggestTags(f.text);
-      const reel: Reel = { ...blankReel(f.kind, f.code), skills: tags.skills, grades: tags.grades, status: "pending" };
-      if (known.some((r) => r.code === f.code)) out.push({ reel, state: "have" });
+      const d = readPastedDetails(f.text);
+      const reel: Reel = { ...blankReel(f.kind, f.code), title: d.title, creator: d.creator, skills: d.skills, grades: d.grades, status: "pending" };
+      const existing = known.find((r) => r.code === f.code);
+      if (existing && !existing.title && d.title) {
+        // Fill in an untitled reel; keep whatever the owner already set.
+        out.push({ state: "update", reel: { ...existing, title: d.title, creator: existing.creator || d.creator, skills: existing.skills.length ? existing.skills : d.skills, grades: existing.grades.length ? existing.grades : d.grades } });
+      } else if (existing) out.push({ reel: existing, state: "have" });
       else {
         out.push({ reel, state: (await checkEmbed(f)) === "blocked" ? "blocked" : "new" });
         await new Promise((res) => setTimeout(res, 300));
@@ -428,12 +433,16 @@ export function BulkAdd({ known, onClose, onAdded }: { known: Reel[]; onClose: (
   }
 
   const fresh = rows?.filter((r) => r.state === "new") ?? [];
+  const updates = rows?.filter((r) => r.state === "update") ?? [];
+  const [updated, setUpdated] = useState(0);
 
   async function add() {
     setBusy("Adding…");
     setError("");
     try {
-      await api.addReels(fresh.map((r) => r.reel));
+      if (fresh.length) await api.addReels(fresh.map((r) => r.reel));
+      for (const u of updates) await api.saveReel(u.reel);
+      setUpdated(updates.length);
       setAdded(fresh.length);
       await onAdded();
     } catch (e) {
@@ -449,7 +458,12 @@ export function BulkAdd({ known, onClose, onAdded }: { known: Reel[]; onClose: (
         {added !== null ? (
           <>
             <p>
-              <strong>{added === 1 ? "1 reel added" : `${added} reels added`} as drafts.</strong> They are not public yet. Open "Review drafts" to give each a title, check the tags and publish.
+              {updated > 0 && <strong>{updated === 1 ? "1 reel filled in. " : `${updated} reels filled in. `}</strong>}
+              {added > 0 && (
+                <>
+                  <strong>{added === 1 ? "1 reel added" : `${added} reels added`} as drafts.</strong> They are not public yet. Open "Review drafts" to check each one and publish.
+                </>
+              )}
             </p>
             <button className="tt-btn tt-btn-primary" onClick={onClose}>
               Done
@@ -458,7 +472,7 @@ export function BulkAdd({ known, onClose, onAdded }: { known: Reel[]; onClose: (
         ) : rows === null ? (
           <>
             <label>
-              Paste your links <span className="hint">One or many. Paste a reel's caption under its link and the tags are ticked for you; the caption is not saved</span>
+              Paste your links <span className="hint">One or many. Under a link you can add lines starting with title:, tags: and by:, or paste the caption to have tags ticked for you</span>
               <textarea rows={9} value={text} onChange={(e) => setText(e.target.value)} placeholder={"https://www.instagram.com/reel/…\n(caption, optional)\n\nhttps://www.instagram.com/reel/…"} />
             </label>
             {error && (
@@ -476,10 +490,10 @@ export function BulkAdd({ known, onClose, onAdded }: { known: Reel[]; onClose: (
               {rows.map(({ reel, state }) => (
                 <li key={reel.code}>
                   <a href={permalink(reel)} target="_blank" rel="noreferrer">
-                    {reel.code}
+                    {reel.title || reel.code}
                   </a>
                   <span className="small">
-                    {state === "have" ? "Already in the library" : state === "blocked" ? "Instagram won't allow it on other sites" : reel.skills.length ? reel.skills.map(skillLabel).join(", ") : "No tags found"}
+                    {state === "update" ? `Fill in: ${reel.skills.map(skillLabel).join(", ") || "no tags"}` : state === "have" ? "Already in the library, left as it is" : state === "blocked" ? "Instagram won't allow it on other sites" : reel.skills.length ? reel.skills.map(skillLabel).join(", ") : "No tags found"}
                   </span>
                 </li>
               ))}
@@ -490,8 +504,8 @@ export function BulkAdd({ known, onClose, onAdded }: { known: Reel[]; onClose: (
               </p>
             )}
             <div className="row2">
-              <button className="tt-btn tt-btn-primary" disabled={busy !== "" || fresh.length === 0} onClick={() => void add()}>
-                {busy || (fresh.length === 0 ? "Nothing new to add" : fresh.length === 1 ? "Add 1 as a draft" : `Add ${fresh.length} as drafts`)}
+              <button className="tt-btn tt-btn-primary" disabled={busy !== "" || fresh.length + updates.length === 0} onClick={() => void add()}>
+                {busy || (fresh.length + updates.length === 0 ? "Nothing to add" : [updates.length ? `Fill in ${updates.length}` : "", fresh.length ? `Add ${fresh.length} as drafts` : ""].filter(Boolean).join(" and "))}
               </button>
               <button className="tt-btn" disabled={busy !== ""} onClick={() => setRows(null)}>
                 Back

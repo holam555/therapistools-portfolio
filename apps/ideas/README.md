@@ -67,8 +67,10 @@ owner sign-in stay hidden.
   tags, Publish. Pasting the caption into the caption box ticks likely tags
   and fills the creator's handle; the caption itself is not saved.
 - **Add many at once:** "Add in bulk" takes a pasted list of links, each
-  optionally followed by its caption. New ones are checked with Instagram,
-  tagged from the pasted text and saved as drafts.
+  optionally followed by its caption or by `title:`, `tags:` and `by:`
+  lines. New ones are checked with Instagram and saved as drafts; a reel
+  already in the library with no title is filled in, and a titled one is
+  left alone.
 - **Review drafts and suggestions:** "Review drafts" opens them as a feed. Watch,
   tap Edit, fix the title and tags, then Publish or Reject.
 - **Find reels that stopped working:** "Check all reels" asks Instagram

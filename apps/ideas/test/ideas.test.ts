@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { applyFilter, blankReel, embedUrl, parseBulk, parseInstagramUrl, parseRoute, routeHash } from "../src/reels";
 import { readSaved, toggleSaved } from "../src/saved";
 import { SEED_REELS } from "../src/seed";
-import { suggestTags } from "../src/taxonomy";
+import { readPastedDetails, suggestTags } from "../src/taxonomy";
 import { cspFor } from "../vite.config";
 import { OEMBED_ORIGIN, readEmbedAnswer } from "../src/embedCheck";
 
@@ -40,6 +40,21 @@ Scissor skills warm up`;
       { kind: "reel", code: "CCCCC33333", text: "Scissor skills warm up" },
     ]);
     expect(parseBulk("no links here")).toEqual([]);
+  });
+});
+
+describe("pasted details", () => {
+  it("takes title, tags and creator lines as given", () => {
+    expect(readPastedDetails("title: Hallway sensory circuit\ntags: Sensory, classroom support, nonsense\nby: @some.ot")).toEqual({
+      title: "Hallway sensory circuit",
+      creator: "some.ot",
+      skills: ["sensory", "classroom-support"],
+      grades: [],
+    });
+    expect(readPastedDetails("tags: visual motor, pre-writing").skills).toEqual(["pre-writing", "visual-motor"]);
+  });
+  it("falls back to the keyword rules for a plain caption", () => {
+    expect(readPastedDetails("Heavy work for kindergarten #sensory")).toEqual({ title: "", creator: "", skills: ["sensory"], grades: ["prek-1"] });
   });
 });
 
