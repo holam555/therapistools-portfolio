@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import * as api from "./api";
 import { Feed } from "./Feed";
 import { Home } from "./Home";
-import { CheckReels, EditReel, OwnerSignIn, Suggest } from "./Dialogs";
+import { BulkAdd, CheckReels, EditReel, OwnerSignIn, Suggest } from "./Dialogs";
 import { applyFilter, parseRoute, routeHash, type Reel, type Route } from "./reels";
 import { readSaved, toggleSaved, writeSaved } from "./saved";
 import { SEED_REELS } from "./seed";
 
-export type Dialog = { kind: "suggest" } | { kind: "signin" } | { kind: "check" } | { kind: "edit"; reel: Reel; isNew: boolean } | null;
+export type Dialog = { kind: "suggest" } | { kind: "signin" } | { kind: "check" } | { kind: "bulk" } | { kind: "edit"; reel: Reel; isNew: boolean } | null;
 
 export default function App() {
   const [route, setRoute] = useState<Route>(() => parseRoute(location.hash));
@@ -95,6 +95,7 @@ export default function App() {
         />
       )}
       {dialog?.kind === "suggest" && <Suggest known={reels} onClose={() => setDialog(null)} />}
+      {dialog?.kind === "bulk" && <BulkAdd known={reels} onClose={() => setDialog(null)} onAdded={reload} />}
       {dialog?.kind === "check" && <CheckReels reels={reels} onClose={() => setDialog(null)} onChanged={reload} />}
       {dialog?.kind === "signin" && (
         <OwnerSignIn

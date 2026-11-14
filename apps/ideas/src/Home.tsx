@@ -80,7 +80,10 @@ export function Home({ reels, saved, owner, ownerReady, pendingCount, canSuggest
                 ＋ Add a reel
               </button>
               <button className="tt-btn" disabled={pendingCount === 0} onClick={() => go({ view: "feed", filter: {}, review: true })}>
-                Review suggestions <span className="n">{pendingCount}</span>
+                Review drafts <span className="n">{pendingCount}</span>
+              </button>
+              <button className="tt-btn" disabled={!ownerReady} onClick={() => openDialog({ kind: "bulk" })}>
+                ＋ Add in bulk
               </button>
               <button className="tt-btn" disabled={!ownerReady} onClick={() => openDialog({ kind: "check" })}>
                 Check all reels

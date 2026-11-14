@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as api from "./api";
 import { BLOCKED_MESSAGE, checkEmbed } from "./embedCheck";
-import { blankReel, parseInstagramUrl, permalink, type Reel, type Status } from "./reels";
-import { GRADE_BANDS, SKILL_AREAS, suggestTags, type GradeId, type SkillId } from "./taxonomy";
+import { blankReel, parseBulk, parseInstagramUrl, permalink, type Reel, type Status } from "./reels";
+import { GRADE_BANDS, SKILL_AREAS, skillLabel, suggestTags, type GradeId, type SkillId } from "./taxonomy";
 
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -388,6 +388,117 @@ export function CheckReels({ reels, onClose, onChanged }: { reels: Reel[]; onClo
         <button className="tt-btn tt-btn-primary" onClick={onClose}>
           {finished ? "Done" : "Stop"}
         </button>
+      </div>
+    </Sheet>
+  );
+}
+
+type BulkRow = { reel: Reel; state: "new" | "have" | "blocked" };
+
+/**
+ * The owner pastes many links at once, each optionally followed by its
+ * caption. Every new reel is checked with Instagram, tagged from the pasted
+ * text by the keyword rules, and saved as a draft for review. The pasted text
+ * is read for tags and then dropped; it is not saved.
+ */
+export function BulkAdd({ known, onClose, onAdded }: { known: Reel[]; onClose: () => void; onAdded: () => Promise<void> }) {
+  const [text, setText] = useState("");
+  const [rows, setRows] = useState<BulkRow[] | null>(null);
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [added, setAdded] = useState<number | null>(null);
+
+  async function read() {
+    const found = parseBulk(text);
+    if (found.length === 0) return setError("No Instagram reel or post links found in that text.");
+    setError("");
+    const out: BulkRow[] = [];
+    for (const [i, f] of found.entries()) {
+      setBusy(`Checking ${i + 1} of ${found.length}…`);
+      const tags = suggestTags(f.text);
+      const reel: Reel = { ...blankReel(f.kind, f.code), skills: tags.skills, grades: tags.grades, status: "pending" };
+      if (known.some((r) => r.code === f.code)) out.push({ reel, state: "have" });
+      else {
+        out.push({ reel, state: (await checkEmbed(f)) === "blocked" ? "blocked" : "new" });
+        await new Promise((res) => setTimeout(res, 300));
+      }
+    }
+    setBusy("");
+    setRows(out);
+  }
+
+  const fresh = rows?.filter((r) => r.state === "new") ?? [];
+
+  async function add() {
+    setBusy("Adding…");
+    setError("");
+    try {
+      await api.addReels(fresh.map((r) => r.reel));
+      setAdded(fresh.length);
+      await onAdded();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not add them.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  return (
+    <Sheet title="Add in bulk" onClose={onClose}>
+      <div className="sheet-body">
+        {added !== null ? (
+          <>
+            <p>
+              <strong>{added === 1 ? "1 reel added" : `${added} reels added`} as drafts.</strong> They are not public yet. Open "Review drafts" to give each a title, check the tags and publish.
+            </p>
+            <button className="tt-btn tt-btn-primary" onClick={onClose}>
+              Done
+            </button>
+          </>
+        ) : rows === null ? (
+          <>
+            <label>
+              Paste your links <span className="hint">One or many. Paste a reel's caption under its link and the tags are ticked for you; the caption is not saved</span>
+              <textarea rows={9} value={text} onChange={(e) => setText(e.target.value)} placeholder={"https://www.instagram.com/reel/…\n(caption, optional)\n\nhttps://www.instagram.com/reel/…"} />
+            </label>
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            <button className="tt-btn tt-btn-primary" disabled={busy !== "" || text.trim() === ""} onClick={() => void read()}>
+              {busy || "Read links"}
+            </button>
+          </>
+        ) : (
+          <>
+            <ul className="check-list">
+              {rows.map(({ reel, state }) => (
+                <li key={reel.code}>
+                  <a href={permalink(reel)} target="_blank" rel="noreferrer">
+                    {reel.code}
+                  </a>
+                  <span className="small">
+                    {state === "have" ? "Already in the library" : state === "blocked" ? "Instagram won't allow it on other sites" : reel.skills.length ? reel.skills.map(skillLabel).join(", ") : "No tags found"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="row2">
+              <button className="tt-btn tt-btn-primary" disabled={busy !== "" || fresh.length === 0} onClick={() => void add()}>
+                {busy || (fresh.length === 0 ? "Nothing new to add" : fresh.length === 1 ? "Add 1 as a draft" : `Add ${fresh.length} as drafts`)}
+              </button>
+              <button className="tt-btn" disabled={busy !== ""} onClick={() => setRows(null)}>
+                Back
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </Sheet>
   );

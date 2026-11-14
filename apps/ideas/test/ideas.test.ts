@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyFilter, blankReel, embedUrl, parseInstagramUrl, parseRoute, routeHash } from "../src/reels";
+import { applyFilter, blankReel, embedUrl, parseBulk, parseInstagramUrl, parseRoute, routeHash } from "../src/reels";
 import { readSaved, toggleSaved } from "../src/saved";
 import { SEED_REELS } from "../src/seed";
 import { suggestTags } from "../src/taxonomy";
@@ -22,6 +22,24 @@ describe("Instagram links", () => {
   });
   it("starter reels are unique", () => {
     expect(new Set(SEED_REELS.map((r) => r.code)).size).toBe(SEED_REELS.length);
+  });
+});
+
+describe("bulk paste", () => {
+  it("splits on links, keeps the text after each, and drops repeats and junk", () => {
+    const pasted = `https://www.instagram.com/reel/AAAAA11111/?igsh=x
+Heavy work ideas for kindergarten #sensory
+
+https://www.instagram.com/p/BBBBB22222/ https://www.instagram.com/reel/AAAAA11111/
+https://www.instagram.com/someuser/
+https://www.instagram.com/reel/CCCCC33333/
+Scissor skills warm up`;
+    expect(parseBulk(pasted)).toEqual([
+      { kind: "reel", code: "AAAAA11111", text: "Heavy work ideas for kindergarten #sensory" },
+      { kind: "p", code: "BBBBB22222", text: "" },
+      { kind: "reel", code: "CCCCC33333", text: "Scissor skills warm up" },
+    ]);
+    expect(parseBulk("no links here")).toEqual([]);
   });
 });
 

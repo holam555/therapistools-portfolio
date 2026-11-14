@@ -93,3 +93,21 @@ export function routeHash(r: Route): string {
   const s = q.toString();
   return `#/${r.view === "feed" ? "feed" : ""}${s ? `?${s}` : ""}`;
 }
+
+/**
+ * Reads a pasted block holding many reels: each Instagram link starts a new
+ * reel, and whatever text follows it (a caption, a note) up to the next link
+ * belongs to that reel. Links alone work too. Repeats are dropped.
+ */
+export function parseBulk(text: string): { kind: Kind; code: string; text: string }[] {
+  const link = /https?:\/\/(?:www\.|m\.)?instagram\.com\/[^\s<>"']+/gi;
+  const hits = [...text.matchAll(link)];
+  const out: { kind: Kind; code: string; text: string }[] = [];
+  hits.forEach((m, i) => {
+    const parsed = parseInstagramUrl(m[0]);
+    if (!parsed || out.some((o) => o.code === parsed.code)) return;
+    const end = i + 1 < hits.length ? hits[i + 1].index : text.length;
+    out.push({ ...parsed, text: text.slice(m.index + m[0].length, end).trim() });
+  });
+  return out;
+}

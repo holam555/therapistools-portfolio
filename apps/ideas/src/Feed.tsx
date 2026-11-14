@@ -110,7 +110,7 @@ export function Feed({ reels, route, saved, owner, onToggleSave, onEdit, onClose
     }
   }
 
-  const heading = route.review ? "Suggestions to review" : route.filter.saved ? "My saved ideas" : route.filter.skill ? skillLabel(route.filter.skill) : "All ideas";
+  const heading = route.review ? "Drafts to review" : route.filter.saved ? "My saved ideas" : route.filter.skill ? skillLabel(route.filter.skill) : "All ideas";
 
   return (
     <div className="feed">

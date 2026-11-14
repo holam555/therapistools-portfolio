@@ -66,7 +66,10 @@ owner sign-in stay hidden.
   Open `/ideas/`, tap "Add a reel", paste the link, give it a title, tick the
   tags, Publish. Pasting the caption into the caption box ticks likely tags
   and fills the creator's handle; the caption itself is not saved.
-- **Review suggestions:** "Review suggestions" opens them as a feed. Watch,
+- **Add many at once:** "Add in bulk" takes a pasted list of links, each
+  optionally followed by its caption. New ones are checked with Instagram,
+  tagged from the pasted text and saved as drafts.
+- **Review drafts and suggestions:** "Review drafts" opens them as a feed. Watch,
   tap Edit, fix the title and tags, then Publish or Reject.
 - **Find reels that stopped working:** "Check all reels" asks Instagram
   about each one and lists those it refuses, with a Hide button.
