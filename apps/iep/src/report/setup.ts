@@ -1,0 +1,106 @@
+import type { DisciplineId } from "../model/disciplines";
+import { ratingKey } from "./grids";
+import type { GradeGroup, ReportSetup } from "./types";
+import { GRADE_GROUPS } from "./types";
+
+/** A sensible starting point: every assessment ticked (unknown ones count as ticked). Tick boxes are ticked when a template is chosen. */
+export function defaultSetup(grade: GradeGroup = "g25"): ReportSetup {
+  return {
+    reportType: "evaluation",
+    concerns: true,
+    concernIn: { motor: true, sensory: true },
+    grade,
+    pronoun: "he",
+    assessments: {},
+    teacherAreas: { fine: true, gross: false, sensory: false },
+    serviceType: "direct",
+    screenItems: [],
+    objectives: 3,
+    goalAreas: ["writing", "cutting"],
+    ratings: {},
+  };
+}
+
+/**
+ * Values filled before blocks had permanent ids were stored by position
+ * ("teacher/0/0"). Move them to the block's id ("teacher/teacher-concerns/0").
+ */
+export function migrateValueKeys(values: Record<string, string>, sections: { id: string; blocks: { id?: string }[] }[]): Record<string, string> {
+  let changed = false;
+  const out = { ...values };
+  for (const s of sections)
+    s.blocks.forEach((b, i) => {
+      if (!b.id) return;
+      const oldPrefix = `${s.id}/${i}/`;
+      for (const k of Object.keys(values))
+        if (k.startsWith(oldPrefix)) {
+          const nk = `${s.id}/${b.id}/${k.slice(oldPrefix.length)}`;
+          if (!(nk in out)) out[nk] = values[k];
+          delete out[k];
+          changed = true;
+        }
+    });
+  return changed ? out : values;
+}
+
+/** SPM-2 results were once keyed by scale name alone; grids key every rating "group.row". */
+export function migrateSpmKeys(spm: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(spm).map(([k, v]) => [k.includes(".") ? k : ratingKey("scales", k), v]));
+}
+
+const KEY = (d: DisciplineId) => (d === "ot" ? "easyiep.report" : `easyiep.report.${d}`);
+const VALUES_KEY = (d: DisciplineId) => (d === "ot" ? "easyiep.reportValues" : `easyiep.reportValues.${d}`);
+
+export function loadValues(d: DisciplineId): Record<string, string> {
+  try {
+    const p = JSON.parse(localStorage.getItem(VALUES_KEY(d)) ?? "{}");
+    if (!p || typeof p !== "object") return {};
+    return Object.fromEntries(Object.entries(p).filter(([, v]) => typeof v === "string")) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+export function saveValues(d: DisciplineId, v: Record<string, string>): void {
+  try {
+    localStorage.setItem(VALUES_KEY(d), JSON.stringify(v));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+export function loadSetup(d: DisciplineId): ReportSetup {
+  try {
+    const raw = localStorage.getItem(KEY(d));
+    if (!raw) return defaultSetup();
+    // Older setups kept SPM-2 ratings in their own field and a single yes/no for teacher concerns.
+    const { spm, teacherConcerns, ...p } = JSON.parse(raw) as Partial<ReportSetup> & { spm?: Record<string, string>; teacherConcerns?: boolean };
+    const base = defaultSetup(GRADE_GROUPS.some((g) => g.id === p.grade) ? (p.grade as GradeGroup) : "g25");
+    const ratings: ReportSetup["ratings"] = {};
+    if (p.ratings && typeof p.ratings === "object") for (const [k, v] of Object.entries(p.ratings)) if (v && typeof v === "object") ratings[k] = v;
+    if (spm && typeof spm === "object" && !ratings.spm2) ratings.spm2 = migrateSpmKeys(spm);
+    return {
+      ...base,
+      ...p,
+      assessments: { ...base.assessments, ...(p.assessments ?? {}) },
+      screenItems: Array.isArray(p.screenItems) ? p.screenItems.filter((x): x is string => typeof x === "string") : base.screenItems,
+      goalAreas: Array.isArray(p.goalAreas) ? p.goalAreas : base.goalAreas,
+      objectives: typeof p.objectives === "number" && p.objectives > 0 && p.objectives < 10 ? p.objectives : base.objectives,
+      teacherAreas: p.teacherAreas && typeof p.teacherAreas === "object" ? { ...base.teacherAreas, ...p.teacherAreas } : teacherConcerns === false ? { fine: false, gross: false, sensory: false } : base.teacherAreas,
+      serviceType: p.serviceType === "indirect" ? "indirect" : "direct",
+      // Setups saved before 2026-11-09 have no areas: a concern then meant both.
+      concernIn: p.concernIn && typeof p.concernIn === "object" ? { motor: p.concernIn.motor !== false, sensory: p.concernIn.sensory !== false } : base.concernIn,
+      ratings,
+    };
+  } catch {
+    return defaultSetup();
+  }
+}
+
+export function saveSetup(d: DisciplineId, s: ReportSetup): void {
+  try {
+    localStorage.setItem(KEY(d), JSON.stringify(s));
+  } catch {
+    /* storage unavailable: the setup just won't be remembered */
+  }
+}

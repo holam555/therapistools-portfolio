@@ -1,0 +1,8 @@
+Fonts used by the Scheduler
+===========================
+
+The Scheduler uses the shared Therapistools fonts, Fredoka and DM Sans.
+They are self-hosted in shared/fonts so the app makes no third-party
+requests, and both are licensed under the SIL Open Font License 1.1.
+The full license texts are in shared/fonts/OFL-Fredoka.txt and
+shared/fonts/OFL-DMSans.txt.
