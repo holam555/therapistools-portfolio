@@ -6,11 +6,14 @@ import { loadEnv, searchForWorkspaceRoot } from "vite";
 // CSP below names them exactly:
 //   - the site's Supabase project (the reel list, suggestions, owner sign-in).
 //     The address lives in one file, apps/iep/.env, shared with the IEP Writer.
+//   - graph.facebook.com, Meta's official embed service, asked only when a
+//     reel is suggested, added or checked: "can this post be embedded?"
 //   - www.instagram.com, in a frame only, once a visitor opens the feed.
 //     No Instagram script ever runs in this page.
 
 const SUPABASE_ORIGIN = /^https:\/\/[a-z0-9-]+\.supabase\.co$/;
 export const INSTAGRAM_ORIGIN = "https://www.instagram.com";
+const OEMBED_ORIGIN = "https://graph.facebook.com";
 
 export function cspFor(supabaseOrigin: string): string {
   return [
@@ -19,7 +22,7 @@ export function cspFor(supabaseOrigin: string): string {
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     "img-src 'self' data:",
-    `connect-src ${supabaseOrigin || "'none'"}`,
+    `connect-src ${supabaseOrigin ? `${supabaseOrigin} ${OEMBED_ORIGIN}` : "'none'"}`,
     `frame-src ${INSTAGRAM_ORIGIN}`,
     "object-src 'none'",
     "base-uri 'none'",

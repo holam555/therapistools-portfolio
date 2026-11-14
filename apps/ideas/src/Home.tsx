@@ -82,6 +82,9 @@ export function Home({ reels, saved, owner, ownerReady, pendingCount, canSuggest
               <button className="tt-btn" disabled={pendingCount === 0} onClick={() => go({ view: "feed", filter: {}, review: true })}>
                 Review suggestions <span className="n">{pendingCount}</span>
               </button>
+              <button className="tt-btn" disabled={!ownerReady} onClick={() => openDialog({ kind: "check" })}>
+                Check all reels
+              </button>
               {ownerReady && reels.length === 0 && (
                 <button
                   className="tt-btn"

@@ -12,7 +12,8 @@ per screen, saves the ones they like and can suggest a reel of their own.
 | Reel model | `src/reels.ts` | Reads an Instagram link down to its kind and short code, builds the embed address, filters, and the URL-hash route |
 | Starter reels | `src/seed.ts` | The owner's first picks as plain links. Shown when the reel list cannot be reached |
 | Saved ideas | `src/saved.ts` | Short codes in this browser's storage (`ttideas:saved:v1`). Never sent anywhere |
-| Network | `src/api.ts` | The only network code: the reel list, a suggestion, the owner's edits |
+| Network | `src/api.ts` | The reel list, a suggestion, the owner's edits |
+| Embed check | `src/embedCheck.ts` | Asks Meta's official embed service whether Instagram allows a post on other sites. Runs when a reel is suggested or published, and from the owner's "Check all reels". Only the yes or no is read; nothing is kept |
 | Database | `supabase/migrations/` | Table `ideas_reels` in the site's Supabase project (the address is in `apps/iep/.env`). Row Level Security: anyone reads published rows and may add a pending suggestion; only owners change anything |
 | Screens | `src/Home.tsx`, `src/Feed.tsx`, `src/Dialogs.tsx` | Front page, swipe feed, and the suggest, sign-in and edit sheets |
 
@@ -34,8 +35,13 @@ per screen, saves the ones they like and can suggest a reel of their own.
   is the only way to stop its video, since the page cannot reach inside the
   frame. Every slide carries a "Watch it on Instagram" link for when a frame
   comes up blank (seen in the Claude app's built-in browser, not in Chrome).
-- A broken video cannot be detected: Instagram answers the same for a deleted
-  post, and the page cannot see inside the frame.
+- A blocked post (deleted, private, embedding off) is found by asking Meta's
+  embed service (`src/embedCheck.ts`); the embed frame itself answers the
+  same for every post and the page cannot see inside it. The service is used
+  without an access token, which worked on 2026-11-13 though Meta's docs ask
+  for one: any unclear answer counts as "unknown", never as broken, so the
+  app keeps working if Meta closes that door. A reel that only plays on
+  Instagram itself ("Watch on Instagram") cannot be told apart.
 
 Any change to what leaves the device must also update
 `apps/home/privacy/index.html` (section "Activity Ideas").
@@ -62,6 +68,8 @@ owner sign-in stay hidden.
   and fills the creator's handle; the caption itself is not saved.
 - **Review suggestions:** "Review suggestions" opens them as a feed. Watch,
   tap Edit, fix the title and tags, then Publish or Reject.
+- **Find reels that stopped working:** "Check all reels" asks Instagram
+  about each one and lists those it refuses, with a Hide button.
 - **Removal request:** open the reel in the feed, tap Edit, then "Hide from
   library" or Delete.
 

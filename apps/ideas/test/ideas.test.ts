@@ -4,6 +4,7 @@ import { readSaved, toggleSaved } from "../src/saved";
 import { SEED_REELS } from "../src/seed";
 import { suggestTags } from "../src/taxonomy";
 import { cspFor } from "../vite.config";
+import { OEMBED_ORIGIN, readEmbedAnswer } from "../src/embedCheck";
 
 describe("Instagram links", () => {
   it("keeps the kind and short code and drops share tracking", () => {
@@ -59,10 +60,22 @@ describe("tag suggestions from pasted text", () => {
   });
 });
 
+describe("embed check", () => {
+  it("reads Meta's answer, and never calls an unclear answer broken", () => {
+    expect(readEmbedAnswer(200, { html: "<blockquote></blockquote>" })).toBe("ok");
+    expect(readEmbedAnswer(400, { error: { code: 24, error_subcode: 2207045 } })).toBe("blocked");
+    expect(readEmbedAnswer(400, { error: { code: 200, error_subcode: 2207046 } })).toBe("blocked");
+    expect(readEmbedAnswer(400, { error: { code: 190, message: "An access token is required" } })).toBe("unknown");
+    expect(readEmbedAnswer(429, null)).toBe("unknown");
+    expect(readEmbedAnswer(200, null)).toBe("unknown");
+    expect(cspFor("https://example.supabase.co")).toContain(OEMBED_ORIGIN);
+  });
+});
+
 describe("page security policy", () => {
   it("lets the page reach its own database and frame Instagram, and nothing else", () => {
     const csp = cspFor("https://example.supabase.co");
-    expect(csp).toContain("connect-src https://example.supabase.co;");
+    expect(csp).toContain("connect-src https://example.supabase.co https://graph.facebook.com;");
     expect(csp).toContain("frame-src https://www.instagram.com;");
     expect(csp).toContain("script-src 'self';");
     expect(cspFor("")).toContain("connect-src 'none'");

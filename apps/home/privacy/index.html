@@ -106,11 +106,12 @@
       <p>The account server is run by Supabase, a hosting company, in a project we control. It holds your email address, when you last signed in, and your template. Data is encrypted on the way there and at rest. Only you can read your rows: the database enforces it, not just the page. If you sign in with Google, Google learns that you signed in to this site; we receive your email address from Google and nothing else. Sign-in emails are sent through Resend, an email delivery service, which sees your email address and the sign-in code and nothing else. Deleting your account removes your template; ask through the feedback form and we do it within a week.</p>
 
       <h3 id="ideas-data">Activity Ideas</h3>
-      <p>Activity Ideas is a library of short videos picked by therapists. It works differently from the other tools in three ways.</p>
+      <p>Activity Ideas is a library of short videos picked by therapists. It works differently from the other tools in these ways.</p>
       <ul>
         <li><strong>The reel list.</strong> When the page opens it fetches the list of reels (titles, tags and Instagram post codes) from our database, which is run by Supabase, the same hosting company as the IEP Writer account. That request carries nothing about you beyond the standard details every web request has, such as your IP address.</li>
         <li><strong>The videos.</strong> We do not copy or host any video. When you start swiping, each video is shown in a frame served by Instagram, so Instagram (Meta) receives a standard request including your IP address, and may set its own cookies inside that frame, as it would if you opened the video on Instagram. Nothing loads from Instagram on the Activity Ideas front page or anywhere else on this site, and we do not tell Instagram what you save.</li>
         <li><strong>Suggestions.</strong> If you suggest a reel, we receive the link, your one sentence about it, the skill area if you pick one, and a name or handle if you give one. The name is shown next to the reel if we publish it. Please keep students out of it. Suggestions we do not use are deleted within 90 days.</li>
+        <li><strong>Checking a link.</strong> Before a suggestion is sent, the page asks Meta's embed service whether Instagram allows that post to be shown on other sites. Meta receives the link you pasted and a standard request including your IP address, nothing else. This happens only when you send a suggestion.</li>
       </ul>
       <p>Saved ideas stay in your browser. If a reel of yours is in the library and you want it removed, tell us through the feedback form and we take it down.</p>
 

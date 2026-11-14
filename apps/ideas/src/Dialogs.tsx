@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as api from "./api";
+import { BLOCKED_MESSAGE, checkEmbed } from "./embedCheck";
 import { blankReel, parseInstagramUrl, permalink, type Reel, type Status } from "./reels";
 import { GRADE_BANDS, SKILL_AREAS, suggestTags, type GradeId, type SkillId } from "./taxonomy";
 
@@ -56,6 +57,10 @@ export function Suggest({ known, onClose }: { known: Reel[]; onClose: () => void
     if (known.some((r) => r.code === parsed.code)) return setError("Good news: that one is already in the library.");
     setError("");
     setState("sending");
+    if (!trap && (await checkEmbed(parsed)) === "blocked") {
+      setState("form");
+      return setError(BLOCKED_MESSAGE);
+    }
     // A filled trap field means a bot; pretend it worked.
     const result = trap ? "ok" : await api.suggestReel({ ...parsed, note, name, skill: skill[0] ?? "" });
     if (result === "error") {
@@ -209,6 +214,10 @@ export function EditReel({ reel, isNew, known, onClose, onSaved }: { reel: Reel;
     if (status === "published" && !target.title.trim()) return setError("Give it a title before publishing.");
     setBusy(true);
     setError("");
+    if (status === "published" && (await checkEmbed(target)) === "blocked") {
+      setBusy(false);
+      return setError(BLOCKED_MESSAGE);
+    }
     try {
       await api.saveReel({ ...target, status });
       await onSaved();
@@ -296,6 +305,90 @@ export function EditReel({ reel, isNew, known, onClose, onSaved }: { reel: Reel;
           )}
         </div>
       </form>
+    </Sheet>
+  );
+}
+
+/** The owner checks every reel with Instagram's embed service and hides the ones it refuses. */
+export function CheckReels({ reels, onClose, onChanged }: { reels: Reel[]; onClose: () => void; onChanged: () => Promise<void> }) {
+  const [done, setDone] = useState(0);
+  const [blocked, setBlocked] = useState<Reel[]>([]);
+  const [unknown, setUnknown] = useState(0);
+  const [hidden, setHidden] = useState<string[]>([]);
+  const [error, setError] = useState("");
+  const list = useRef(reels.filter((r) => r.status === "published" || r.status === "pending"));
+  const finished = done >= list.current.length;
+
+  useEffect(() => {
+    let stop = false;
+    void (async () => {
+      // One at a time, with a short pause, so the service is never flooded.
+      for (const r of list.current) {
+        if (stop) return;
+        const answer = await checkEmbed(r);
+        if (stop) return;
+        if (answer === "blocked") setBlocked((b) => [...b, r]);
+        if (answer === "unknown") setUnknown((n) => n + 1);
+        setDone((n) => n + 1);
+        await new Promise((res) => setTimeout(res, 300));
+      }
+    })();
+    return () => {
+      stop = true;
+    };
+  }, []);
+
+  async function hide(r: Reel) {
+    setError("");
+    try {
+      await api.saveReel({ ...r, status: r.status === "pending" ? "rejected" : "unpublished" });
+      setHidden((h) => [...h, r.code]);
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not hide it.");
+    }
+  }
+
+  return (
+    <Sheet title="Check all reels" onClose={onClose}>
+      <div className="sheet-body">
+        <p role="status">
+          {finished ? `Checked ${done} reels.` : `Checking ${done + 1} of ${list.current.length}…`} {finished && blocked.length === 0 && unknown === 0 && "Instagram allows all of them."}
+        </p>
+        {blocked.length > 0 && (
+          <>
+            <p>
+              <strong>Instagram won't show these on other sites:</strong>
+            </p>
+            <ul className="check-list">
+              {blocked.map((r) => (
+                <li key={r.code}>
+                  <a href={permalink(r)} target="_blank" rel="noreferrer">
+                    {r.title || `Untitled (${r.code})`}
+                  </a>
+                  {hidden.includes(r.code) ? (
+                    <span className="small">Hidden</span>
+                  ) : (
+                    <button className="tt-btn" onClick={() => void hide(r)}>
+                      Hide
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {finished && unknown > 0 && <p className="small">{unknown} could not be checked just now (no clear answer from Instagram). They were left as they are; try again later.</p>}
+        <p className="small">This can't spot reels that only play on Instagram itself. Those still need a look.</p>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        <button className="tt-btn tt-btn-primary" onClick={onClose}>
+          {finished ? "Done" : "Stop"}
+        </button>
+      </div>
     </Sheet>
   );
 }
